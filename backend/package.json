@@ -11,7 +11,8 @@
     "test": "jest",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
-    "seed": "prisma db seed"
+    "seed": "prisma db seed",
+    "deploy": "npm run migrate:deploy && npm run build"
   },
   "dependencies": {
     "@prisma/client": "5.7.0",
