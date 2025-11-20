@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EstadoMiembro {
+  pendiente_aprobacion
+  miembro_aprobado
+  rechazado
+  baneado
+}
+
+enum RolUsuario {
+  miembro
+  admin
+  moderador
+}
+
+enum EstadoSolicitud {
+  pendiente
+  aprobada
+  rechazada
+}
+
+enum EstadoPeticion {
+  en_revision
+  aprobada
+  no_aprobada
+  cerrada
+}
+
+enum TipoVoto {
+  aprobar
+  rechazar
+}
+
+model Usuario {
+  id             String           @id @default(cuid())
+  displayName    String
+  email          String           @unique
+  passwordHash   String?          @map("password_hash")
+  avatarUrl      String?
+  genero         String?
+  fechaNacimiento DateTime?
+  edad           Int?
+  estadoMiembro  EstadoMiembro    @default(pendiente_aprobacion)
+  rol            RolUsuario       @default(miembro)
+  bio            String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  solicitudes    SolicitudMiembro[]
+  peticiones     Peticion[]       @relation("PeticionAutor")
+  votosPeticiones PeticionVoto[]
+  votosSolicitudes SolicitudVoto[]
+  likes          PeticionLike[]
+  reportes       Reporte[]        @relation("ReporteAutor")
+}
+
+model SolicitudMiembro {
+  id                String        @id @default(cuid())
+  usuario           Usuario       @relation(fields: [usuarioId], references: [id])
+  usuarioId         String
+  textoSolicitud    String
+  fotoSolicitudUrl  String
+  estadoSolicitud   EstadoSolicitud @default(pendiente)
+  fechaCreacion     DateTime      @default(now())
+  fechaResolucion   DateTime?
+  totalAprobaciones Int           @default(0)
+  totalRechazos     Int           @default(0)
+  votos             SolicitudVoto[]
+}
+
+model SolicitudVoto {
+  id              String        @id @default(cuid())
+  solicitud       SolicitudMiembro @relation(fields: [solicitudId], references: [id])
+  solicitudId     String
+  miembroVotante  Usuario       @relation(fields: [miembroVotanteId], references: [id])
+  miembroVotanteId String
+  tipoVoto        TipoVoto
+  mensaje         String?
+  fechaVoto       DateTime      @default(now())
+  @@unique([solicitudId, miembroVotanteId])
+}
+
+model Peticion {
+  id                String        @id @default(cuid())
+  autor             Usuario       @relation("PeticionAutor", fields: [autorId], references: [id])
+  autorId           String
+  titulo            String
+  descripcion       String
+  imagenes          String[]
+  videoUrl          String?
+  estadoPeticion    EstadoPeticion @default(en_revision)
+  likes             Int            @default(0)
+  totalAprobaciones Int            @default(0)
+  totalRechazos     Int            @default(0)
+  createdAt         DateTime       @default(now())
+  fechaResolucion   DateTime?
+  votos             PeticionVoto[]
+  hearts            PeticionLike[]
+  reportes          Reporte[]      @relation("ReportePeticion")
+  @@index([estadoPeticion])
+  @@index([createdAt])
+}
+
+model PeticionVoto {
+  id                String     @id @default(cuid())
+  peticion          Peticion   @relation(fields: [peticionId], references: [id])
+  peticionId        String
+  miembroVotante    Usuario    @relation(fields: [miembroVotanteId], references: [id])
+  miembroVotanteId  String
+  tipoVoto          TipoVoto
+  mensaje           String?
+  fechaVoto         DateTime   @default(now())
+  @@unique([peticionId, miembroVotanteId])
+}
+
+model PeticionLike {
+  id               String   @id @default(cuid())
+  peticion         Peticion @relation(fields: [peticionId], references: [id])
+  peticionId       String
+  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId        String
+  createdAt        DateTime @default(now())
+  @@unique([peticionId, usuarioId])
+}
+
+model Configuracion {
+  id                   Int      @id @default(1)
+  minVotosSolicitud    Int      @default(10)
+  minVotosPeticion     Int      @default(100)
+  porcentajeAprobacion Int      @default(70)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model Reporte {
+  id            String   @id @default(cuid())
+  tipo          String
+  descripcion   String
+  autor         Usuario  @relation("ReporteAutor", fields: [autorId], references: [id])
+  autorId       String
+  peticion      Peticion? @relation("ReportePeticion", fields: [peticionId], references: [id])
+  peticionId    String?
+  estado        String   @default("pendiente")
+  createdAt     DateTime @default(now())
+}
