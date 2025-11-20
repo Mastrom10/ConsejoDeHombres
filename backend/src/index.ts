@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import passport from 'passport';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GoogleStrategy, Profile, VerifyCallback } from 'passport-google-oauth20';
 import { env } from './config/env';
 import { connectPrisma, prisma } from './config/prisma';
 import { errorHandler } from './middlewares/errorHandler';
@@ -26,7 +26,7 @@ passport.use(
       clientSecret: env.googleClientSecret,
       callbackURL: env.googleCallbackUrl
     },
-    async (_accessToken, _refresh, profile, done) => {
+    async (_accessToken: string, _refresh: string, profile: Profile, done: VerifyCallback) => {
       try {
         const email = profile.emails?.[0]?.value;
         if (!email) return done(new Error('Google sin email'));

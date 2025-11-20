@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import axios from 'axios';
+import { useState } from 'react';
 
 export type PeticionDto = {
   id: string;
@@ -13,26 +15,103 @@ export type PeticionDto = {
 };
 
 export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
-  const porcentaje = Math.round((peticion.totalAprobaciones / Math.max(1, peticion.totalAprobaciones + peticion.totalRechazos)) * 100);
+  const [reported, setReported] = useState(false);
+  const totalVotos = peticion.totalAprobaciones + peticion.totalRechazos;
+  const porcentaje = totalVotos > 0 
+    ? Math.round((peticion.totalAprobaciones / totalVotos) * 100) 
+    : 0;
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'aprobada': return 'bg-green-500/20 text-green-400 border-green-500/50';
+      case 'no_aprobada': return 'bg-red-500/20 text-red-400 border-red-500/50';
+      case 'cerrada': return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
+      default: return 'bg-amber-500/20 text-amber-400 border-amber-500/50';
+    }
+  };
+
+  const handleReport = async () => {
+    if (!confirm('¿Estás seguro de reportar esta petición como inapropiada?')) return;
+    try {
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/peticiones/${peticion.id}/reportar`, {
+        descripcion: 'Reporte desde tarjeta'
+      }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      setReported(true);
+      alert('Reporte enviado. Gracias por mantener la calidad del Consejo.');
+    } catch (error) {
+      alert('Error al reportar o ya has reportado esta petición.');
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    return status.replace('_', ' ').toUpperCase();
+  };
+
+  if (reported) return null; // Ocultar localmente si se reporta con éxito
+
   return (
-    <div className="card">
-      <div className="flex-between">
-        <div>
-          <h3>{peticion.titulo}</h3>
-          <small>Por {peticion.autor.displayName}</small>
+    <div className="card group hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 relative">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-600">
+            {peticion.autor.avatarUrl ? (
+              <img src={peticion.autor.avatarUrl} alt={peticion.autor.displayName} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-lg font-bold text-slate-400">{peticion.autor.displayName.charAt(0)}</span>
+            )}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-white leading-tight group-hover:text-primary transition-colors">
+              {peticion.titulo}
+            </h3>
+            <p className="text-xs text-secondary">
+              Por {peticion.autor.displayName} • {new Date(peticion.createdAt || '').toLocaleDateString()}
+            </p>
+          </div>
         </div>
-        <span className="badge" style={{ background: peticion.estadoPeticion === 'aprobada' ? '#22c55e' : peticion.estadoPeticion === 'no_aprobada' ? '#ef4444' : '#f59e0b' }}>
-          {peticion.estadoPeticion}
-        </span>
+        
+        <div className="flex gap-2">
+          <button 
+            onClick={handleReport}
+            className="text-slate-600 hover:text-red-400 transition-colors p-1"
+            title="Reportar contenido"
+          >
+            🚩
+          </button>
+          <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(peticion.estadoPeticion)}`}>
+            {getStatusLabel(peticion.estadoPeticion)}
+          </span>
+        </div>
       </div>
-      <p>{peticion.descripcion.slice(0, 120)}...</p>
-      <div className="flex" style={{ gap: 10 }}>
-        <span>❤️ {peticion.likes}</span>
-        <span>👍 {peticion.totalAprobaciones}</span>
-        <span>👎 {peticion.totalRechazos}</span>
-        <span>{porcentaje}% aprobación</span>
+
+      <p className="text-slate-300 text-sm mb-6 line-clamp-3">
+        {peticion.descripcion}
+      </p>
+
+      <div className="flex items-center justify-between border-t border-slate-700 pt-4 mt-auto">
+        <div className="flex gap-4 text-sm text-secondary font-medium">
+          <div className="flex items-center gap-1 text-pink-400">
+            <span>❤️</span> {peticion.likes}
+          </div>
+          <div className="flex items-center gap-1 text-sky-400">
+            <span>🗳️</span> {totalVotos}
+          </div>
+          <div className="flex items-center gap-1">
+            <span className={porcentaje >= 70 ? 'text-green-400' : 'text-yellow-400'}>
+              {porcentaje}%
+            </span> a favor
+          </div>
+        </div>
+
+        <Link 
+          href={`/peticiones/${peticion.id}`}
+          className="text-sm font-bold text-primary hover:text-sky-300 hover:underline decoration-2 underline-offset-4"
+        >
+          Ver detalle →
+        </Link>
       </div>
-      <Link href={`/peticiones/${peticion.id}`}>Ver detalle →</Link>
     </div>
   );
 }

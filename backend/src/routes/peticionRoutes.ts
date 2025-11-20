@@ -10,7 +10,10 @@ const router = Router();
 router.get('/', async (req, res) => {
   const filter = req.query.estado as EstadoPeticion | undefined;
   const peticiones = await prisma.peticion.findMany({
-    where: filter ? { estadoPeticion: filter } : undefined,
+    where: {
+      ...(filter ? { estadoPeticion: filter } : {}),
+      oculta: false // Filtramos las ocultas por defecto
+    },
     include: { autor: true },
     orderBy: { createdAt: 'desc' }
   });
@@ -19,6 +22,7 @@ router.get('/', async (req, res) => {
 
 router.get('/populares', async (_req, res) => {
   const peticiones = await prisma.peticion.findMany({
+    where: { oculta: false },
     take: 20,
     orderBy: [{ likes: 'desc' }, { createdAt: 'desc' }],
     include: { autor: true }
@@ -39,6 +43,53 @@ router.post('/', authenticate, requireMember, async (req, res, next) => {
       }
     });
     res.status(201).json(peticion);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/:id/reportar', authenticate, requireMember, async (req, res, next) => {
+  try {
+    const peticionId = req.params.id;
+    const { descripcion } = req.body;
+
+    // Verificar si ya reportó
+    const existing = await prisma.reporte.findFirst({
+      where: {
+        autorId: req.user!.id,
+        peticionId
+      }
+    });
+
+    if (existing) {
+      return res.status(400).json({ message: 'Ya has reportado esta petición' });
+    }
+
+    // Crear reporte
+    await prisma.reporte.create({
+      data: {
+        autorId: req.user!.id,
+        peticionId,
+        tipo: 'contenido_inapropiado',
+        descripcion: descripcion || 'Reporte de usuario'
+      }
+    });
+
+    // Incrementar contador y chequear autohide
+    const peticion = await prisma.peticion.update({
+      where: { id: peticionId },
+      data: { reportesCount: { increment: 1 } }
+    });
+
+    if (peticion.reportesCount >= 5) {
+      await prisma.peticion.update({
+        where: { id: peticionId },
+        data: { oculta: true }
+      });
+      // Aquí podrías notificar a admins
+    }
+
+    res.json({ message: 'Reporte recibido', ocultada: peticion.reportesCount >= 5 });
   } catch (e) {
     next(e);
   }

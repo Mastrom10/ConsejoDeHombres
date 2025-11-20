@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -96,6 +97,8 @@ model Peticion {
   videoUrl          String?
   estadoPeticion    EstadoPeticion @default(en_revision)
   likes             Int            @default(0)
+  reportesCount     Int            @default(0)
+  oculta            Boolean        @default(false)
   totalAprobaciones Int            @default(0)
   totalRechazos     Int            @default(0)
   createdAt         DateTime       @default(now())

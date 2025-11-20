@@ -4,26 +4,12 @@ import { env } from '../config/env';
 import { prisma } from '../config/prisma';
 import { EstadoMiembro, RolUsuario } from '@prisma/client';
 
-declare global {
-  namespace Express {
-    interface UserPayload {
-      id: string;
-      email: string;
-      rol: RolUsuario;
-      estadoMiembro: EstadoMiembro;
-    }
-    interface Request {
-      user?: UserPayload;
-    }
-  }
-}
-
 export function authenticate(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ message: 'Token requerido' });
   const [, token] = authHeader.split(' ');
   try {
-    const payload = jwt.verify(token, env.jwtSecret) as Express.UserPayload;
+    const payload = jwt.verify(token, env.jwtSecret) as Express.User;
     req.user = payload;
     return next();
   } catch (e) {
