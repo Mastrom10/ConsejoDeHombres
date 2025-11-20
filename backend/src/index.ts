@@ -76,7 +76,7 @@ passport.use(
         } else {
           // Actualizar avatar y nombre para mantener el perfil sincronizado con Google
           user = await prisma.usuario.update({
-            where: { id: existing.id },
+            where: { id: user.id },
             data: {
               displayName,
               ...(avatar ? { avatarUrl: avatar } : {})
