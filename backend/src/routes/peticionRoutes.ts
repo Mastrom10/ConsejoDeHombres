@@ -190,6 +190,14 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
     const parsed = votoPeticionSchema.parse(req.body);
     const peticionId = req.params.id;
 
+    const peticion = await prisma.peticion.findUnique({ where: { id: peticionId } });
+    if (!peticion) {
+      return res.status(404).json({ message: 'Petición no encontrada' });
+    }
+    if (peticion.autorId === req.user!.id) {
+      return res.status(400).json({ message: 'No puedes votar tu propia petición.' });
+    }
+
     try {
       await prisma.peticionVoto.create({
         data: {
@@ -206,8 +214,6 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
       }
       throw e;
     }
-
-    const peticion = await prisma.peticion.findUnique({ where: { id: peticionId } });
 
     let config = await prisma.configuracion.findFirst();
     if (!config) {
