@@ -61,16 +61,19 @@ passport.use(
         const displayName = profile.displayName || 'Usuario Google';
         const avatar = profile.photos?.[0]?.value;
         const existing = await prisma.usuario.findUnique({ where: { email } });
-        const user =
-          existing ||
-          (await prisma.usuario.create({
+        let user = existing;
+        if (!user) {
+          const totalUsuarios = await prisma.usuario.count();
+          const esPrimerosCien = totalUsuarios < 100;
+          user = await prisma.usuario.create({
             data: {
               email,
               displayName,
               avatarUrl: avatar,
-              estadoMiembro: EstadoMiembro.pendiente_aprobacion
+              estadoMiembro: esPrimerosCien ? EstadoMiembro.miembro_aprobado : EstadoMiembro.pendiente_aprobacion
             }
-          }));
+          });
+        }
         return done(null, user);
       } catch (e) {
         return done(e as Error);

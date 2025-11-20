@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { authenticate, requireMember } from '../middlewares/auth';
 import { prisma } from '../config/prisma';
 import { solicitudSchema, votoSolicitudSchema } from '../dtos/solicitudDtos';
-import { evaluateThreshold } from '../services/rulesService';
+import { evaluateThreshold, requiredValidationsByUserCount } from '../services/rulesService';
 import { EstadoMiembro, EstadoSolicitud } from '@prisma/client';
 
 const router = Router();
@@ -35,6 +35,22 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
   try {
     const parsed = votoSolicitudSchema.parse(req.body);
     const solicitudId = req.params.id;
+
+    // Limitar a 3 validaciones (aprobar) por día y por usuario
+    if (parsed.tipoVoto === 'aprobar') {
+      const inicioHoy = new Date();
+      inicioHoy.setUTCHours(0, 0, 0, 0);
+      const aprobacionesHoy = await prisma.solicitudVoto.count({
+        where: {
+          miembroVotanteId: req.user!.id,
+          tipoVoto: 'aprobar',
+          fechaVoto: { gte: inicioHoy }
+        }
+      });
+      if (aprobacionesHoy >= 3) {
+        return res.status(429).json({ message: 'Has alcanzado el máximo de 3 validaciones diarias.' });
+      }
+    }
     const voto = await prisma.solicitudVoto.create({
       data: {
         solicitudId,
@@ -44,12 +60,17 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
       }
     });
     const solicitud = await prisma.solicitudMiembro.findUnique({ where: { id: solicitudId } });
-    const config = (await prisma.configuracion.findFirst())!;
+    const totalUsuarios = await prisma.usuario.count();
+    const requiredValidations = requiredValidationsByUserCount(totalUsuarios);
     const totals = {
       totalAprobaciones: (solicitud?.totalAprobaciones || 0) + (parsed.tipoVoto === 'aprobar' ? 1 : 0),
       totalRechazos: (solicitud?.totalRechazos || 0) + (parsed.tipoVoto === 'rechazar' ? 1 : 0)
     };
-    const estado = evaluateThreshold({ totalAprobaciones: totals.totalAprobaciones, totalRechazos: totals.totalRechazos, config });
+    const estado = evaluateThreshold({
+      totalAprobaciones: totals.totalAprobaciones,
+      totalRechazos: totals.totalRechazos,
+      requiredValidations
+    });
     await prisma.solicitudMiembro.update({
       where: { id: solicitudId },
       data: {

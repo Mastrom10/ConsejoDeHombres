@@ -1,4 +1,4 @@
-import { evaluatePeticion, evaluateThreshold } from '../services/rulesService';
+import { evaluatePeticion, evaluateThreshold, requiredValidationsByUserCount } from '../services/rulesService';
 import { Configuracion } from '@prisma/client';
 
 const config: Configuracion = {
@@ -11,14 +11,28 @@ const config: Configuracion = {
 };
 
 describe('Reglas de solicitudes', () => {
-  it('permanece pendiente con pocos votos', () => {
-    expect(evaluateThreshold({ totalAprobaciones: 1, totalRechazos: 0, config })).toBe('pendiente');
+  it('permanece pendiente si no alcanza las validaciones requeridas', () => {
+    expect(evaluateThreshold({ totalAprobaciones: 0, totalRechazos: 0, requiredValidations: 1 })).toBe('pendiente');
   });
   it('aprueba cuando supera el umbral', () => {
-    expect(evaluateThreshold({ totalAprobaciones: 3, totalRechazos: 1, config })).toBe('aprobada');
+    expect(evaluateThreshold({ totalAprobaciones: 2, totalRechazos: 0, requiredValidations: 2 })).toBe('aprobada');
   });
   it('rechaza con mayoría negativa', () => {
-    expect(evaluateThreshold({ totalAprobaciones: 1, totalRechazos: 3, config })).toBe('rechazada');
+    expect(evaluateThreshold({ totalAprobaciones: 0, totalRechazos: 2, requiredValidations: 2 })).toBe('rechazada');
+  });
+});
+
+describe('Regla dinámica de validaciones por cantidad de usuarios', () => {
+  it('no requiere validaciones para los primeros 100 usuarios', () => {
+    expect(requiredValidationsByUserCount(50)).toBe(0);
+    expect(requiredValidationsByUserCount(100)).toBe(0);
+  });
+  it('requiere 1 validación entre 101 y 1000 usuarios', () => {
+    expect(requiredValidationsByUserCount(101)).toBe(1);
+    expect(requiredValidationsByUserCount(1000)).toBe(1);
+  });
+  it('requiere 10 validaciones para más de 10000 usuarios', () => {
+    expect(requiredValidationsByUserCount(15000)).toBe(10);
   });
 });
 
