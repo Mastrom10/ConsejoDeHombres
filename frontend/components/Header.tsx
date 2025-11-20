@@ -31,34 +31,37 @@ export default function Header() {
   const isApproved = user?.estadoMiembro === 'miembro_aprobado';
 
   return (
-    <header className="bg-surface/80 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50">
+    <header className="bg-surface/90 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50 shadow-lg">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent hover:opacity-80 transition-opacity">
-          ⚔️ Consejo
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
+           <span className="text-2xl group-hover:animate-pulse">⚔️</span>
+           <span className="text-xl font-black uppercase tracking-widest bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent">
+             El Consejo
+           </span>
         </Link>
         
-        <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
-          <Link href="/" className="hover:text-white transition-colors">Peticiones</Link>
-          <Link href="/solicitudes" className="hover:text-white transition-colors">Solicitudes</Link>
+        <nav className="hidden md:flex items-center gap-6 text-xs font-bold tracking-widest uppercase text-slate-400">
+          <Link href="/" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Peticiones</Link>
+          <Link href="/solicitudes" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Solicitudes</Link>
           {isLoggedIn ? (
             <>
               {isApproved ? (
-                <Link href="/crear-peticion" className="hover:text-white transition-colors">
-                  Crear Petición
+                <Link href="/crear-peticion" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">
+                  Elevar Petición
                 </Link>
               ) : (
-                <span className="text-slate-600 cursor-not-allowed" title="Debes ser miembro aprobado para crear peticiones">
-                  Crear Petición 🔒
+                <span className="text-slate-700 cursor-not-allowed" title="Rango insuficiente">
+                  Elevar Petición 🔒
                 </span>
               )}
-              <Link href="/perfil" className="hover:text-white transition-colors">Mi Perfil</Link>
-              <button onClick={logout} className="text-red-400 hover:text-red-300 transition-colors">
-                Salir
+              <Link href="/perfil" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Expediente</Link>
+              <button onClick={logout} className="text-red-500 hover:text-red-400 transition-colors border border-red-900/30 px-3 py-1 rounded hover:bg-red-900/10">
+                Desertar
               </button>
             </>
           ) : (
-            <Link href="/login" className="btn btn-primary py-1.5 text-xs">
-              Ingresar
+            <Link href="/login" className="btn btn-primary py-2 px-4 text-xs shadow-[0_0_15px_rgba(56,189,248,0.3)]">
+              Presentarse
             </Link>
           )}
         </nav>

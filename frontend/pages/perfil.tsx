@@ -7,26 +7,36 @@ type User = {
   avatarUrl?: string;
   estadoMiembro: string;
   rol: string;
+  // Supongamos que el backend enviara esto en el futuro, por ahora simulamos
+  votosRecibidos?: number; 
 };
 
 export default function Perfil() {
   const [user, setUser] = useState<User | null>(null);
+  
+  // Simulación de votos para el ejemplo (el backend debería enviarlo en 'solicitudes')
+  // En un caso real, haríamos un fetch a /solicitudes/me
+  const votosNecesarios = 10;
+  const votosActuales = 3; // Hardcodeado para efecto visual "absurdo"
 
   useEffect(() => {
-    // Cargamos del localStorage para inmediatez
     const userStr = localStorage.getItem('user');
     if (userStr) {
       setUser(JSON.parse(userStr));
     }
   }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'miembro_aprobado': return 'text-green-400 border-green-500/30 bg-green-500/10';
-      case 'pendiente_aprobacion': return 'text-amber-400 border-amber-500/30 bg-amber-500/10';
-      case 'rechazado': return 'text-red-400 border-red-500/30 bg-red-500/10';
-      default: return 'text-slate-400';
-    }
+  const getRoleLabel = (role: string, status: string) => {
+    if (status === 'pendiente_aprobacion') return 'ASPIRANTE A NOVICIO';
+    if (role === 'admin') return 'GRAN MAESTRE';
+    if (role === 'moderador') return 'INQUISIDOR';
+    return 'CABALLERO DE LA MESA';
+  };
+
+  const getRoleColor = (role: string, status: string) => {
+    if (status === 'pendiente_aprobacion') return 'text-amber-500 border-amber-500/50 bg-amber-500/10';
+    if (role === 'admin') return 'text-purple-400 border-purple-500/50 bg-purple-500/10 shadow-[0_0_15px_rgba(168,85,247,0.2)]';
+    return 'text-sky-400 border-sky-500/50 bg-sky-500/10';
   };
 
   const getInitials = (name: string) => {
@@ -36,64 +46,127 @@ export default function Perfil() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto max-w-4xl p-4 py-12">
-        <h1 className="text-3xl mb-8 border-b border-slate-700 pb-4">Mi Perfil</h1>
+      <main className="flex-1 container mx-auto max-w-5xl p-4 py-12">
+        <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
+            <div>
+                <h1 className="text-4xl font-black uppercase tracking-tighter text-white mb-1">Expediente Personal</h1>
+                <p className="text-primary font-serif italic text-sm">"Confidencial - Solo para ojos autorizados"</p>
+            </div>
+            <div className="text-right hidden md:block">
+                <div className="text-xs text-slate-600 uppercase tracking-widest">Código de Agente</div>
+                <div className="font-mono text-slate-400">CH-{Math.floor(Math.random() * 10000)}</div>
+            </div>
+        </div>
         
         {!user ? (
-          <div className="text-center py-12">
-            <p className="text-secondary mb-4">No has iniciado sesión.</p>
+          <div className="text-center py-12 border border-red-900/30 bg-red-900/10 rounded p-8">
+            <h2 className="text-red-500 font-bold text-xl uppercase mb-2">⚠️ Acceso Denegado</h2>
+            <p className="text-red-300/70 mb-4">Identificación requerida para acceder a los archivos.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Columna Izquierda: Tarjeta de Identidad */}
-            <div className="md:col-span-1">
-              <div className="card text-center">
-                <div className="w-32 h-32 mx-auto rounded-full bg-slate-800 border-4 border-surface shadow-xl overflow-hidden mb-4 relative group">
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-4xl font-bold text-slate-600">
-                      {getInitials(user.displayName)}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            {/* Columna Izquierda: Tarjeta de Identidad Táctica */}
+            <div className="lg:col-span-4">
+              <div className="bg-surface border border-slate-700 rounded-lg p-6 shadow-2xl relative overflow-hidden">
+                {/* Decoración de fondo "Top Secret" */}
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-slate-800 rotate-45 z-0"></div>
+                
+                <div className="relative z-10 text-center">
+                    <div className="w-40 h-40 mx-auto rounded-md bg-slate-900 border-2 border-slate-600 shadow-inner overflow-hidden mb-6 relative">
+                    {user.avatarUrl ? (
+                        <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover contrast-125 grayscale-[50%]" />
+                    ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-700 bg-slate-950">
+                            <span className="text-5xl font-black opacity-20">{getInitials(user.displayName)}</span>
+                            <span className="text-[10px] mt-2 uppercase tracking-widest opacity-40">No Image</span>
+                        </div>
+                    )}
+                    {/* Sello de agua */}
+                    <div className="absolute bottom-2 right-2 w-3 h-3 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_#22c55e]"></div>
                     </div>
-                  )}
-                </div>
-                
-                <h2 className="text-xl font-bold text-white mb-1">{user.displayName}</h2>
-                <p className="text-sm text-secondary mb-4">{user.email}</p>
-                
-                <div className={`inline-flex px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(user.estadoMiembro)}`}>
-                  {user.estadoMiembro.replace('_', ' ').toUpperCase()}
+                    
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tight mb-1">{user.displayName}</h2>
+                    <p className="text-xs text-slate-500 font-mono mb-6 tracking-wider">{user.email}</p>
+                    
+                    <div className={`inline-block w-full py-3 border-y-2 text-sm font-black tracking-[0.2em] uppercase ${getRoleColor(user.rol, user.estadoMiembro)}`}>
+                        {getRoleLabel(user.rol, user.estadoMiembro)}
+                    </div>
                 </div>
               </div>
+
+              {/* Panel de Estado del Aspirante */}
+              {user.estadoMiembro === 'pendiente_aprobacion' && (
+                  <div className="mt-6 bg-slate-900 border border-dashed border-amber-700/50 p-4 rounded">
+                      <h3 className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-3">Progreso de Aprobación</h3>
+                      <div className="w-full bg-slate-800 h-4 rounded-full overflow-hidden border border-slate-700 mb-2">
+                          <div 
+                            className="bg-amber-600 h-full relative stripe-pattern" 
+                            style={{ width: `${(votosActuales / votosNecesarios) * 100}%` }}
+                          ></div>
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-400 font-mono">
+                          <span>{votosActuales} Votos a favor</span>
+                          <span>Objetivo: {votosNecesarios}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-3 italic text-center">
+                          "La paciencia es la primera virtud del caballero."
+                      </p>
+                  </div>
+              )}
             </div>
 
-            {/* Columna Derecha: Detalles */}
-            <div className="md:col-span-2 space-y-6">
-              <div className="card">
-                <h3 className="text-lg font-bold mb-4 text-primary">Información de Miembro</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+            {/* Columna Derecha: Detalles Clasificados */}
+            <div className="lg:col-span-8 space-y-6">
+              <div className="card border-l-4 border-l-primary">
+                <div className="flex justify-between items-start mb-6 border-b border-slate-700 pb-4">
+                    <h3 className="text-lg font-black uppercase tracking-widest text-slate-100">Datos de Filiación</h3>
+                    <span className="bg-slate-800 text-xs px-2 py-1 rounded text-slate-400 font-mono">NIVEL 1</span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-4">
                   <div>
-                    <span className="block text-secondary text-xs uppercase tracking-wider">Rol</span>
-                    <span className="text-white font-medium">{user.rol.toUpperCase()}</span>
+                    <span className="block text-primary/60 text-[10px] uppercase tracking-[0.2em] mb-1">Rango Operativo</span>
+                    <span className="text-white font-bold text-lg font-serif">{user.rol.toUpperCase()}</span>
                   </div>
                   <div>
-                    <span className="block text-secondary text-xs uppercase tracking-wider">Fecha de Ingreso</span>
-                    <span className="text-white font-medium">No disponible</span>
+                    <span className="block text-primary/60 text-[10px] uppercase tracking-[0.2em] mb-1">Fecha de Juramento</span>
+                    <span className="text-white font-bold text-lg font-serif">CLASSIFIED</span>
                   </div>
-                  <div className="col-span-2">
-                     <div className="p-3 rounded bg-slate-800/50 border border-slate-700">
-                        <p className="text-slate-400 text-xs">
-                           ℹ️ Si deseas cambiar tu avatar o información, por favor contacta a un administrador o espera a la próxima actualización del sistema.
-                        </p>
+                  <div className="col-span-full">
+                     <div className="p-4 bg-slate-950 border border-slate-800 rounded flex gap-4 items-center">
+                        <span className="text-3xl">🔏</span>
+                        <div>
+                            <h4 className="text-white font-bold text-sm uppercase">Solicitud de Modificación</h4>
+                            <p className="text-slate-500 text-xs mt-1">
+                                Para alterar cualquier registro biométrico (avatar) o credencial, debe presentar el formulario 27B ante el Alto Mando o esperar la auditoría trimestral.
+                            </p>
+                        </div>
                      </div>
                   </div>
                 </div>
               </div>
               
-              {/* Aquí podrías agregar estadísticas del usuario en el futuro */}
-              <div className="card opacity-50">
-                 <h3 className="text-lg font-bold mb-2">Estadísticas (Próximamente)</h3>
-                 <p className="text-sm text-secondary">Votos realizados, peticiones creadas y karma.</p>
+              {/* Estadísticas de Combate */}
+              <div className="card opacity-70 grayscale transition-all hover:grayscale-0 hover:opacity-100">
+                 <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-black uppercase tracking-widest text-slate-100">Hoja de Servicios</h3>
+                    <span className="text-xs text-amber-500 font-mono border border-amber-500/30 px-2 py-0.5 rounded">EN DESARROLLO</span>
+                 </div>
+                 <div className="grid grid-cols-3 gap-4 text-center">
+                    <div className="bg-slate-800/50 p-3 rounded">
+                        <div className="text-2xl font-black text-white">0</div>
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500">Mociones</div>
+                    </div>
+                    <div className="bg-slate-800/50 p-3 rounded">
+                        <div className="text-2xl font-black text-white">0</div>
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500">Votos Emitidos</div>
+                    </div>
+                    <div className="bg-slate-800/50 p-3 rounded">
+                        <div className="text-2xl font-black text-white">0</div>
+                        <div className="text-[10px] uppercase tracking-widest text-slate-500">Honor</div>
+                    </div>
+                 </div>
               </div>
             </div>
           </div>

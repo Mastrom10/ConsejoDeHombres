@@ -4,6 +4,7 @@ COPY package.json tsconfig.json next.config.js next-env.d.ts tailwind.config.js 
 COPY pages ./pages
 COPY components ./components
 COPY styles ./styles
+COPY public ./public
 
 # Definir argumento de construcción para la URL de la API
 ARG NEXT_PUBLIC_API_URL
