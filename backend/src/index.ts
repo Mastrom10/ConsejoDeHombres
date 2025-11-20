@@ -15,7 +15,33 @@ import { EstadoMiembro, RolUsuario } from '@prisma/client';
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: env.frontendUrl, credentials: true }));
+
+const allowedOrigins = [
+  env.frontendUrl,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // peticiones tipo curl / Postman
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Permitir frontends desplegados en Railway (*.up.railway.app)
+      if (origin.endsWith('.up.railway.app')) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true
+  })
+);
+
 app.use(helmet());
 app.use(apiLimiter);
 
