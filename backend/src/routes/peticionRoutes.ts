@@ -99,14 +99,24 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
   try {
     const parsed = votoPeticionSchema.parse(req.body);
     const peticionId = req.params.id;
-    const voto = await prisma.peticionVoto.create({
-      data: {
-        peticionId,
-        miembroVotanteId: req.user!.id,
-        tipoVoto: parsed.tipoVoto,
-        mensaje: parsed.mensaje
+
+    try {
+      await prisma.peticionVoto.create({
+        data: {
+          peticionId,
+          miembroVotanteId: req.user!.id,
+          tipoVoto: parsed.tipoVoto,
+          mensaje: parsed.mensaje
+        }
+      });
+    } catch (e: any) {
+      // Manejar caso de voto duplicado (constraint única peticionId + miembroVotanteId)
+      if (e?.code === 'P2002') {
+        return res.status(400).json({ message: 'Ya has votado esta petición.' });
       }
-    });
+      throw e;
+    }
+
     const peticion = await prisma.peticion.findUnique({ where: { id: peticionId } });
     const config = (await prisma.configuracion.findFirst())!;
     const totals = {
@@ -123,7 +133,7 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
         fechaResolucion: estado === 'en_revision' ? undefined : new Date()
       }
     });
-    res.json({ voto, estado });
+    res.json({ estado });
   } catch (e) {
     next(e);
   }

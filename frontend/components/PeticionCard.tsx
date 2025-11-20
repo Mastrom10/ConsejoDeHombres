@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import axios from 'axios';
 import { useState } from 'react';
 
 export type PeticionDto = {
@@ -15,7 +14,7 @@ export type PeticionDto = {
 };
 
 export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
-  const [reported, setReported] = useState(false);
+  const [reported] = useState(false);
   const totalVotos = peticion.totalAprobaciones + peticion.totalRechazos;
   const porcentaje = totalVotos > 0 
     ? Math.round((peticion.totalAprobaciones / totalVotos) * 100) 
@@ -27,21 +26,6 @@ export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
       case 'no_aprobada': return 'bg-red-500/20 text-red-400 border-red-500/50';
       case 'cerrada': return 'bg-slate-500/20 text-slate-400 border-slate-500/50';
       default: return 'bg-amber-500/20 text-amber-400 border-amber-500/50';
-    }
-  };
-
-  const handleReport = async () => {
-    if (!confirm('¿Estás seguro de reportar esta petición como inapropiada?')) return;
-    try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/peticiones/${peticion.id}/reportar`, {
-        descripcion: 'Reporte desde tarjeta'
-      }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      setReported(true);
-      alert('Reporte enviado. Gracias por mantener la calidad del Consejo.');
-    } catch (error) {
-      alert('Error al reportar o ya has reportado esta petición.');
     }
   };
 
@@ -73,20 +57,13 @@ export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
         </div>
         
         <div className="flex gap-2">
-          <button 
-            onClick={handleReport}
-            className="text-slate-600 hover:text-red-400 transition-colors p-1"
-            title="Reportar contenido"
-          >
-            🚩
-          </button>
           <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(peticion.estadoPeticion)}`}>
             {getStatusLabel(peticion.estadoPeticion)}
           </span>
         </div>
       </div>
 
-      <p className="text-slate-300 text-sm mb-6 line-clamp-3">
+      <p className="text-slate-300 text-sm mb-6 line-clamp-4 md:line-clamp-5">
         {peticion.descripcion}
       </p>
 
