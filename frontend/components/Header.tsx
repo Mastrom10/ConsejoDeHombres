@@ -65,6 +65,35 @@ export default function Header() {
             </Link>
           )}
         </nav>
+
+        {/* Acciones compactas para móvil */}
+        <div className="flex md:hidden items-center gap-2">
+          {isLoggedIn ? (
+            <>
+              {isApproved && (
+                <Link
+                  href="/crear-peticion"
+                  className="text-[10px] font-bold uppercase tracking-widest text-primary border border-primary/40 px-2 py-1 rounded"
+                >
+                  Elevar
+                </Link>
+              )}
+              <button
+                onClick={logout}
+                className="text-[10px] font-bold uppercase tracking-widest text-red-400 border border-red-500/40 px-2 py-1 rounded"
+              >
+                Desertar
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="btn btn-primary text-[11px] px-3 py-1 shadow-[0_0_12px_rgba(56,189,248,0.4)]"
+            >
+              Presentarse
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );

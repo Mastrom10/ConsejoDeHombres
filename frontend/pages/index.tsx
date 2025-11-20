@@ -3,6 +3,7 @@ import axios from 'axios';
 import Link from 'next/link';
 import Header from '../components/Header';
 import PeticionCard, { PeticionDto } from '../components/PeticionCard';
+import { useRouter } from 'next/router';
 
 type User = {
   estadoMiembro: string;
@@ -10,20 +11,29 @@ type User = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [peticiones, setPeticiones] = useState<PeticionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Cargar usuario
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
     const userStr = localStorage.getItem('user');
     if (userStr) setUser(JSON.parse(userStr));
 
-    // Cargar peticiones
-    axios.get(`${process.env.NEXT_PUBLIC_API_URL}/peticiones`)
+    axios
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/peticiones`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       .then(res => setPeticiones(res.data))
+      .catch(() => setPeticiones([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-background pb-12">

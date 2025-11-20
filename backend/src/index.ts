@@ -73,6 +73,15 @@ passport.use(
               estadoMiembro: esPrimerosCien ? EstadoMiembro.miembro_aprobado : EstadoMiembro.pendiente_aprobacion
             }
           });
+        } else {
+          // Actualizar avatar y nombre para mantener el perfil sincronizado con Google
+          user = await prisma.usuario.update({
+            where: { id: existing.id },
+            data: {
+              displayName,
+              ...(avatar ? { avatarUrl: avatar } : {})
+            }
+          });
         }
         return done(null, user);
       } catch (e) {

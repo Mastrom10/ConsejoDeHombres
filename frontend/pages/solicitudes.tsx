@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Header from '../components/Header';
+import { useRouter } from 'next/router';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -15,10 +16,23 @@ type Solicitud = {
 };
 
 export default function Solicitudes() {
+  const router = useRouter();
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+
   useEffect(() => {
-    axios.get(`${API}/solicitudes`).then((res) => setSolicitudes(res.data));
-  }, []);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    axios
+      .get(`${API}/solicitudes`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then((res) => setSolicitudes(res.data))
+      .catch(() => setSolicitudes([]));
+  }, [router]);
 
   return (
     <>

@@ -39,6 +39,11 @@ enum TipoVoto {
   rechazar
 }
 
+enum TipoReaccionVoto {
+  up
+  down
+}
+
 model Usuario {
   id             String           @id @default(cuid())
   displayName    String
@@ -59,6 +64,7 @@ model Usuario {
   votosSolicitudes SolicitudVoto[]
   likes          PeticionLike[]
   reportes       Reporte[]        @relation("ReporteAutor")
+  reaccionesVotos PeticionVotoReaction[]
 }
 
 model SolicitudMiembro {
@@ -119,6 +125,7 @@ model PeticionVoto {
   tipoVoto          TipoVoto
   mensaje           String?
   fechaVoto         DateTime   @default(now())
+  reacciones        PeticionVotoReaction[]
   @@unique([peticionId, miembroVotanteId])
 }
 
@@ -130,6 +137,18 @@ model PeticionLike {
   usuarioId        String
   createdAt        DateTime @default(now())
   @@unique([peticionId, usuarioId])
+}
+
+model PeticionVotoReaction {
+  id        String           @id @default(cuid())
+  voto      PeticionVoto     @relation(fields: [votoId], references: [id])
+  votoId    String
+  usuario   Usuario          @relation(fields: [usuarioId], references: [id])
+  usuarioId String
+  tipo      TipoReaccionVoto
+  createdAt DateTime         @default(now())
+
+  @@unique([votoId, usuarioId])
 }
 
 model Configuracion {

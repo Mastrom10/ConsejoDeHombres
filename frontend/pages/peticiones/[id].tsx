@@ -5,10 +5,22 @@ import Header from '../../components/Header';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+type VotoConAutor = {
+  id: string;
+  tipoVoto: 'aprobar' | 'rechazar';
+  mensaje?: string | null;
+  fechaVoto: string;
+  miembroVotante: { id: string; displayName: string; avatarUrl?: string | null };
+  upCount: number;
+  downCount: number;
+  myReaction: 'up' | 'down' | null;
+};
+
 export default function PeticionDetalle() {
   const router = useRouter();
   const { id } = router.query;
   const [peticion, setPeticion] = useState<any>(null);
+  const [votos, setVotos] = useState<VotoConAutor[]>([]);
   const [mensaje, setMensaje] = useState('');
   const [voto, setVoto] = useState<'aprobar' | 'rechazar'>('aprobar');
   const [comentario, setComentario] = useState('');
@@ -18,14 +30,23 @@ export default function PeticionDetalle() {
 
   useEffect(() => {
     if (!id) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
     axios
-      .get(`${API}/peticiones`, { params: { id } })
+      .get(`${API}/peticiones/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
       .then((res) => {
-        const match = Array.isArray(res.data) ? res.data.find((p: any) => p.id === id) : res.data;
-        setPeticion(match);
+        setPeticion(res.data);
+        setVotos(res.data.votos || []);
       })
       .catch(() => setMensaje('No se pudo cargar la petición.'));
-  }, [id]);
+  }, [id, router]);
 
   const votar = async () => {
     try {
@@ -36,6 +57,12 @@ export default function PeticionDetalle() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setMensaje('Voto registrado correctamente.');
+      // Recargar historial de votos
+      const res = await axios.get(`${API}/peticiones/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPeticion(res.data);
+      setVotos(res.data.votos || []);
     } catch (e: any) {
       setMensaje(e.response?.data?.message || 'Error al votar');
     }
@@ -54,6 +81,30 @@ export default function PeticionDetalle() {
       setTextoReporte('');
     } catch (e: any) {
       setMensajeReporte(e.response?.data?.message || 'Error al enviar el reporte.');
+    }
+  };
+
+  const reaccionar = async (votoId: string, tipo: 'up' | 'down') => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.replace('/login');
+        return;
+      }
+      await axios.post(
+        `${API}/peticiones/${id}/votos/${votoId}/reaccion`,
+        { tipo },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Recargar historial de votos para reflejar los cambios
+      const res = await axios.get(`${API}/peticiones/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setPeticion(res.data);
+      setVotos(res.data.votos || []);
+    } catch (e) {
+      // Silenciar errores de reacción, son secundarios
+      console.error(e);
     }
   };
 
@@ -188,6 +239,88 @@ export default function PeticionDetalle() {
                 {mensajeReporte}
               </p>
             )}
+          </section>
+
+          {/* Historial de votos */}
+          <section className="border-t border-slate-700 pt-6 space-y-4">
+            <h2 className="text-lg font-bold text-slate-100">Historial de votos</h2>
+            {votos.length === 0 && (
+              <p className="text-sm text-secondary">
+                Aún no hay votos registrados en esta petición.
+              </p>
+            )}
+            <ul className="space-y-3">
+              {votos.map((v) => (
+                <li
+                  key={v.id}
+                  className="flex items-start gap-3 bg-slate-900/40 border border-slate-700 rounded-xl px-3 py-2"
+                >
+                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center overflow-hidden border border-slate-700 flex-shrink-0">
+                    {v.miembroVotante.avatarUrl ? (
+                      <img
+                        src={v.miembroVotante.avatarUrl}
+                        alt={v.miembroVotante.displayName}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-bold text-slate-300">
+                        {v.miembroVotante.displayName.charAt(0)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-slate-100">
+                        {v.miembroVotante.displayName}
+                      </span>
+                      <span
+                        className={
+                          v.tipoVoto === 'aprobar'
+                            ? 'text-xs font-bold text-green-400'
+                            : 'text-xs font-bold text-red-400'
+                        }
+                      >
+                        {v.tipoVoto === 'aprobar' ? 'Aprobó' : 'Rechazó'}
+                      </span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(v.fechaVoto).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-200 mt-1">
+                      {v.mensaje && v.mensaje.trim().length > 0
+                        ? v.mensaje
+                        : v.tipoVoto === 'aprobar'
+                        ? 'Sin comentario adicional (voto a favor).'
+                        : 'Sin comentario adicional (voto en contra).'}
+                    </p>
+                    <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
+                      <button
+                        className={`flex items-center gap-1 px-2 py-1 rounded-full border ${
+                          v.myReaction === 'up'
+                            ? 'border-green-500/70 bg-green-500/10 text-green-300'
+                            : 'border-slate-600 hover:border-green-500/70 hover:text-green-300'
+                        }`}
+                        onClick={() => reaccionar(v.id, 'up')}
+                      >
+                        <span>👍</span>
+                        <span>{v.upCount}</span>
+                      </button>
+                      <button
+                        className={`flex items-center gap-1 px-2 py-1 rounded-full border ${
+                          v.myReaction === 'down'
+                            ? 'border-red-500/70 bg-red-500/10 text-red-300'
+                            : 'border-slate-600 hover:border-red-500/70 hover:text-red-300'
+                        }`}
+                        onClick={() => reaccionar(v.id, 'down')}
+                      >
+                        <span>👎</span>
+                        <span>{v.downCount}</span>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </section>
         </div>
       </main>

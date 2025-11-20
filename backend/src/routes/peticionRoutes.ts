@@ -7,7 +7,7 @@ import { EstadoPeticion } from '@prisma/client';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   const filter = req.query.estado as EstadoPeticion | undefined;
   const peticiones = await prisma.peticion.findMany({
     where: {
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
   res.json(peticiones);
 });
 
-router.get('/populares', async (_req, res) => {
+router.get('/populares', authenticate, async (_req, res) => {
   const peticiones = await prisma.peticion.findMany({
     where: { oculta: false },
     take: 20,
@@ -28,6 +28,96 @@ router.get('/populares', async (_req, res) => {
     include: { autor: true }
   });
   res.json(peticiones);
+});
+
+// Detalle de una petición con historial de votos
+router.get('/:id', authenticate, async (req, res, next) => {
+  try {
+    const peticion = await prisma.peticion.findUnique({
+      where: { id: req.params.id },
+      include: {
+        autor: true,
+        votos: {
+          include: {
+            miembroVotante: { select: { id: true, displayName: true, avatarUrl: true } },
+            reacciones: true
+          },
+          orderBy: { fechaVoto: 'desc' }
+        }
+      }
+    });
+
+    if (!peticion || peticion.oculta) {
+      return res.status(404).json({ message: 'Petición no encontrada' });
+    }
+
+    const userId = req.user!.id;
+    const votosConReacciones = peticion.votos.map((v) => {
+      const upCount = v.reacciones.filter((r) => r.tipo === 'up').length;
+      const downCount = v.reacciones.filter((r) => r.tipo === 'down').length;
+      const myReaction = v.reacciones.find((r) => r.usuarioId === userId)?.tipo ?? null;
+      const { reacciones, ...rest } = v;
+      return { ...rest, upCount, downCount, myReaction };
+    });
+
+    res.json({ ...peticion, votos: votosConReacciones });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Reaccionar a un voto (pulgar arriba/abajo)
+router.post('/:peticionId/votos/:votoId/reaccion', authenticate, requireMember, async (req, res, next) => {
+  try {
+    const { peticionId, votoId } = req.params;
+    const { tipo } = req.body as { tipo: 'up' | 'down' };
+
+    if (tipo !== 'up' && tipo !== 'down') {
+      return res.status(400).json({ message: 'Tipo de reacción inválido' });
+    }
+
+    const voto = await prisma.peticionVoto.findUnique({ where: { id: votoId } });
+    if (!voto || voto.peticionId !== peticionId) {
+      return res.status(404).json({ message: 'Voto no encontrado para esta petición' });
+    }
+
+    const existing = await prisma.peticionVotoReaction.findFirst({
+      where: { votoId, usuarioId: req.user!.id }
+    });
+
+    if (existing && existing.tipo === tipo) {
+      // Mismo tipo: quitar reacción (toggle off)
+      await prisma.peticionVotoReaction.delete({ where: { id: existing.id } });
+    } else if (existing) {
+      // Cambiar de up a down o viceversa
+      await prisma.peticionVotoReaction.update({
+        where: { id: existing.id },
+        data: { tipo }
+      });
+    } else {
+      await prisma.peticionVotoReaction.create({
+        data: {
+          votoId,
+          usuarioId: req.user!.id,
+          tipo
+        }
+      });
+    }
+
+    // Devolver contadores actualizados para ese voto
+    const updated = await prisma.peticionVoto.findUnique({
+      where: { id: votoId },
+      include: { reacciones: true }
+    });
+
+    const upCount = updated?.reacciones.filter((r) => r.tipo === 'up').length ?? 0;
+    const downCount = updated?.reacciones.filter((r) => r.tipo === 'down').length ?? 0;
+    const myReaction = updated?.reacciones.find((r) => r.usuarioId === req.user!.id)?.tipo ?? null;
+
+    res.json({ upCount, downCount, myReaction });
+  } catch (e) {
+    next(e);
+  }
 });
 
 router.post('/', authenticate, requireMember, async (req, res, next) => {
@@ -118,7 +208,11 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
     }
 
     const peticion = await prisma.peticion.findUnique({ where: { id: peticionId } });
-    const config = (await prisma.configuracion.findFirst())!;
+
+    let config = await prisma.configuracion.findFirst();
+    if (!config) {
+      config = await prisma.configuracion.create({ data: {} });
+    }
     const totals = {
       totalAprobaciones: (peticion?.totalAprobaciones || 0) + (parsed.tipoVoto === 'aprobar' ? 1 : 0),
       totalRechazos: (peticion?.totalRechazos || 0) + (parsed.tipoVoto === 'rechazar' ? 1 : 0)

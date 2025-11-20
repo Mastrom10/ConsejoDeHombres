@@ -47,9 +47,11 @@ export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
             )}
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white leading-tight group-hover:text-primary transition-colors">
-              {peticion.titulo}
-            </h3>
+            <Link href={`/peticiones/${peticion.id}`}>
+              <h3 className="text-lg font-bold text-white leading-tight group-hover:text-primary transition-colors hover:underline decoration-primary underline-offset-4">
+                {peticion.titulo}
+              </h3>
+            </Link>
             <p className="text-xs text-secondary">
               Por {peticion.autor.displayName} • {new Date(peticion.createdAt || '').toLocaleDateString()}
             </p>
