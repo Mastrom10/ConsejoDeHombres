@@ -1,164 +1,71 @@
 # 🧔⚔️ Consejo de Hombres
 
-**La plataforma oficial donde los hombres someten sus dilemas, decisiones y ocurrencias al veredicto del Consejo.**
+Aplicación web responsive (backend + frontend) para que los hombres soliciten ingreso al Consejo, creen peticiones y sean votadas por la comunidad.
 
-## 📌 ¿Qué es este proyecto?
+## 🏗️ Arquitectura
+- **Backend**: Node.js + TypeScript + Express + Prisma (PostgreSQL). Autenticación con JWT y OAuth2 (Google), validaciones con Zod, middlewares de seguridad (helmet, rate-limit).
+- **Frontend**: Next.js (React) como SPA/SSR ligera, con componentes reutilizables y estilos simples en CSS.
+- **Base de datos**: PostgreSQL gestionado con Prisma (migraciones y seed). Índices en campos de estado/fechas para escalar a miles de usuarios.
+- **Infraestructura**: Docker + docker-compose (servicios: db, backend, frontend). Variables en `.env`.
 
-**Consejo de Hombres** es una aplicación web social donde los hombres pueden:
+## 🗄️ Modelo de datos (Prisma)
+- `Usuario`: datos básicos, género/edad opcionales, `estadoMiembro` (pendiente, aprobado, rechazado, baneado) y `rol` (miembro, admin, moderador).
+- `SolicitudMiembro` + `SolicitudVoto`: texto y foto de solicitud; conteo de votos y estado (pendiente/aprobada/rechazada).
+- `Peticion` + `PeticionVoto` + `PeticionLike`: título, descripción, imágenes/video, métricas de likes y votos, estado (en revisión/aprobada/no_aprobada/cerrada).
+- `Configuracion`: parámetros globales de votación (mínimo de votos y % de aprobación) editables por admin/moderador.
+- `Reporte`: reportes de contenido por usuarios (para moderación).
 
-1. **Postularse para ser miembros del Consejo**
+## 🔌 Endpoints principales
+- **Auth** `/auth/register` (POST), `/auth/login` (POST), `/auth/google` (GET), `/auth/google/callback` (GET). Respuesta: token JWT + perfil básico.
+- **Solicitudes** `/solicitudes` (GET, POST), `/solicitudes/:id/votar` (POST). Reglas: solo miembros aprobados votan; rechazos requieren mensaje.
+- **Peticiones** `/peticiones` (GET, filtro por estado), `/peticiones/populares` (GET), `/peticiones` (POST), `/peticiones/:id/votar` (POST), `/peticiones/:id/like` (POST). Solo miembros aprobados pueden crear/votar/likear.
+- **Admin** `/admin/config` (GET/PUT), `/admin/usuarios/:id/estado` (PUT), `/admin/reportes` (GET/POST). Solo roles `admin|moderador`.
 
-   * Inician sesión (principalmente con Google).
-   * Cargan una foto y un texto explicando quiénes son.
-   * Otros miembros ya aprobados votan su solicitud (aprobación o rechazo).
-   * Al alcanzar cierto umbral de votos con mayoría positiva, ingresan al Consejo.
+## ✅ Regla de aprobación
+- **Solicitudes de miembro**: requieren mínimo `minVotosSolicitud` (default 10) y ≥ `porcentajeAprobacion` (default 70%) para aprobar; de lo contrario se rechaza. El estado del usuario se actualiza automáticamente.
+- **Peticiones**: requieren mínimo `minVotosPeticion` (default 100) y ≥ `porcentajeAprobacion` para quedar aprobada; si no, quedan `no_aprobada`.
 
-2. **Crear Peticiones al Consejo**
-   Solo los miembros aprobados pueden crear peticiones del tipo **“¿el Consejo de Hombres me aprueba hacer X?”**.
-
-3. **Votar y dejar veredictos**
-   Cada petición permite:
-
-   * ❤️ Likes (popularidad)
-   * 👍 Aprobación
-   * 👎 Rechazo (requiere explicación obligatoria)
-     Las aprobaciones y rechazos determinan si la petición queda:
-   * **Aprobada**
-   * **No aprobada**
-   * **En revisión** (hasta alcanzar la cantidad mínima de votos)
-
-4. **Interactuar en un ecosistema simple y entretenido**
-   El objetivo es que los hombres suban fotos, videos, títulos concretos y descripciones, y la comunidad vote sí o no, siempre con la solemnidad humorística del “Consejo”.
-
----
-
-## 🎯 Objetivo de la plataforma
-
-Crear un foro moderno, mobile-friendly y escalable, donde:
-
-* Ser parte del Consejo sea un **privilegio ganado por votación**.
-* Las decisiones se aprueben por **mayoría cualificada**.
-* Las peticiones más relevantes sean visibles por popularidad o recencia.
-* La comunidad participe con votaciones razonadas (especialmente en los rechazos).
-
-El espíritu es humorístico, participativo y comunitario, pero la plataforma debe ser **robusta, seria y bien diseñada** para miles de usuarios.
-
----
-
-## 🧱 Funcionalidades principales
-
-### 🔑 **Autenticación**
-
-* Login con Google (OAuth2).
-* Creación automática del perfil básico.
-* Registro inicial en estado “pendiente de aprobación”.
-
-### 📝 **Solicitud de ingreso**
-
-* Texto de presentación.
-* Foto de solicitud.
-* Otros miembros pueden votar aprobar/rechazar.
-* La solicitud se aprueba cuando alcanza un mínimo de votos y supera el porcentaje requerido.
-
-### 🧔💬 **Peticiones al Consejo**
-
-* Solo miembros aprobados pueden crearlas.
-* Contenido permitido:
-
-  * Título (una línea, obligatorio)
-  * Descripción
-  * Imágenes
-  * Video opcional
-* La comunidad vota con:
-
-  * ❤️ Like
-  * 👍 Aprobar (mensaje opcional)
-  * 👎 Rechazar (mensaje obligatorio)
-
-### 📊 **Sistema de votación**
-
-* Configurable: cantidad mínima de votos + porcentaje necesario.
-* Votos obligatoriamente únicos por usuario.
-* Resultado automático al alcanzar el threshold.
-
-### 📰 **Feeds y secciones**
-
-* Últimas peticiones.
-* Más populares.
-* En revisión.
-* Aprobadas.
-* No aprobadas.
-* Solicitudes de nuevos miembros.
-
-### 👤 **Perfil**
-
-* Avatar, nombre, estado de miembro.
-* Estadísticas personales.
-* Peticiones creadas.
-* Votos emitidos.
-
-### 🔧 **Panel de administración**
-
-* Moderación de usuarios.
-* Edición de parámetros globales.
-* Gestión de peticiones problemáticas.
-* Acciones sobre reportes (si un contenido fue denunciado).
-
----
-
-## 🏗️ Stack tecnológico sugerido
-
-* **Frontend:** React / Next.js (SPA/SSR), Tailwind/MUI para UI.
-* **Backend:** Node.js + TypeScript (Express / NestJS).
-* **Base de datos:** PostgreSQL con migraciones.
-* **Autenticación:** OAuth2 (Google).
-* **Infraestructura:** Docker + docker-compose.
-* **Almacenamiento:** S3 o servicio equivalente para imágenes y videos.
-
-El stack puede adaptarse según preferencia, pero se busca simplicidad + escalabilidad.
-
----
-
-## 📂 Estructura del proyecto
-
+## 📂 Estructura
 ```
-/root
- ├─ /backend
- │   ├─ src/
- │   ├─ prisma / migrations / models
- │   ├─ tests
- │   └─ Dockerfile
- ├─ /frontend
- │   ├─ src/
- │   ├─ components/
- │   ├─ pages/
- │   └─ Dockerfile
- ├─ docker-compose.yml
- ├─ README.md
- └─ .env.example
+backend/
+  src/ (routes, middlewares, services, dtos)
+  prisma/schema.prisma
+  prisma/seed.ts
+frontend/
+  pages/, components/, styles/
 ```
 
----
+## 🚀 Puesta en marcha
+1. **Variables**: copia `.env.example` → `.env` y ajusta credenciales (Google OAuth, JWT, admin inicial).
+2. **Docker compose** (recomendado):
+   ```bash
+   docker-compose up --build
+   ```
+   - Backend en `http://localhost:4000`
+   - Frontend en `http://localhost:3000`
+3. **Local sin Docker** (requiere Node 20+):
+   ```bash
+   cd backend && npm install && npx prisma migrate dev && npm run seed && npm run dev
+   cd frontend && npm install && npm run dev
+   ```
 
-## 🚀 Estado actual del proyecto
+## 🧪 Tests
+- Backend: reglas de aprobación en `src/tests/rules.test.ts` (Jest). Ejecuta con `npm test` dentro de `backend`.
 
-Este repositorio contiene la estructura, la documentación y el punto de partida para que una IA generadora de código pueda crear automáticamente la aplicación completa (frontend + backend + BD + auth + infra).
-La idea es avanzar por etapas hasta tener un MVP funcional.
+## 🔑 Crear usuario admin inicial
+- Valores por defecto en `.env.example` (`ADMIN_EMAIL`, `ADMIN_PASSWORD`). El seed crea/actualiza ese usuario con estado miembro aprobado y rol admin.
 
----
+## 🖥️ Frontend
+- Feed de últimas peticiones, vista de solicitudes pendientes, formulario de creación de petición y detalle con voto sí/no.
+- Utiliza `NEXT_PUBLIC_API_URL` para apuntar al backend.
 
-## 📣 Contribuciones
+## 📜 Seguridad y buenas prácticas
+- JWT para todas las rutas privadas, middlewares de rol/estado, rate limiting y helmet.
+- Validaciones con Zod para entradas críticas, mensajes obligatorios en rechazos.
+- Separación por capas (rutas → servicios → Prisma) y DTOs.
 
-El proyecto está pensado como open-source / comunidad, por lo que toda PR, issue o idea es bienvenida.
-Sugerencias, mejoras, nuevas funciones del “Consejo”, todo suma.
-
----
-
-## 🧔⚔️ Espíritu del Consejo
-
-Este proyecto mezcla humor, comunidad y tecnología.
-No es una red social más:
-es **el ritual solemne donde los hombres buscan la aprobación de sus pares para tomar decisiones estúpidas, importantes o ambas.**
-
-> *"Que el Consejo de Hombres ilumine tus decisiones."*
-
+## 🧭 Roadmap sugerido
+- Integrar almacenamiento S3 para imágenes/videos.
+- Mejorar UX (estado global de sesión, toasts, skeleton loaders).
+- Panel admin completo con reportes y acciones de moderación.
+- Documentar API con Swagger/OpenAPI.
