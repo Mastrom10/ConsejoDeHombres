@@ -6,6 +6,7 @@ import { loginSchema, registerSchema } from '../dtos/authDtos';
 import { signToken } from '../utils/jwt';
 import { EstadoMiembro } from '@prisma/client';
 import { env } from '../config/env';
+import { authenticate } from '../middlewares/auth';
 
 const router = Router();
 
@@ -95,5 +96,34 @@ router.get(
     res.redirect(`${env.frontendUrl}/auth/success?token=${token}`);
   }
 );
+
+// Devuelve el perfil completo del usuario autenticado usando el JWT
+router.get('/me', authenticate, async (req, res, next) => {
+  try {
+    const user = await prisma.usuario.findUnique({ where: { id: req.user!.id } });
+    if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
+
+    const [validacionesRecibidas, validacionesOtorgadas] = await Promise.all([
+      prisma.solicitudVoto.findMany({
+        where: { solicitud: { usuarioId: user.id }, tipoVoto: 'aprobar' },
+        include: { miembroVotante: { select: { id: true, displayName: true, avatarUrl: true } } }
+      }),
+      prisma.solicitudVoto.findMany({
+        where: { miembroVotanteId: user.id, tipoVoto: 'aprobar' },
+        include: { solicitud: { include: { usuario: { select: { id: true, displayName: true, avatarUrl: true } } } } }
+      })
+    ]);
+
+    const perfilExtendido = {
+      ...user,
+      validadores: validacionesRecibidas.map(v => v.miembroVotante),
+      validados: validacionesOtorgadas.map(v => v.solicitud!.usuario)
+    };
+
+    res.json(perfilExtendido);
+  } catch (e) {
+    next(e);
+  }
+});
 
 export default router;
