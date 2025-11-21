@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import Header from '../components/Header';
+import SEO from '../components/SEO';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -53,7 +54,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background relative">
+    <>
+      <SEO
+        title="Iniciar Sesión"
+        description="Accede al Consejo de Hombres. Inicia sesión con tu cuenta o regístrate para formar parte de nuestra comunidad de deliberación y toma de decisiones."
+        keywords="login, iniciar sesión, registro, consejo de hombres, acceso, membresía"
+        url="/login"
+        noindex={true}
+      />
+      <div className="min-h-screen flex flex-col bg-background relative">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
         <img 
@@ -160,6 +169,7 @@ export default function LoginPage() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </>
   );
 }

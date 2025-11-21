@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import Header from '../components/Header';
+import SEO from '../components/SEO';
 import Link from 'next/link';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -140,8 +141,15 @@ export default function RegistroSolicitud() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+    <>
+      <SEO
+        title="Solicitud de Adhesión"
+        description="Completa tu solicitud de adhesión al Consejo de Hombres. Presenta tu carta de solicitud y acepta el Código Fundacional."
+        url="/registro-solicitud"
+        noindex={true}
+      />
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
       <main className="flex-1 container mx-auto max-w-3xl p-4 py-12">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-black uppercase tracking-tight mb-2 text-white">
@@ -350,7 +358,8 @@ export default function RegistroSolicitud() {
           </div>
         </form>
       </main>
-    </div>
+      </div>
+    </>
   );
 }
 

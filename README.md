@@ -99,6 +99,18 @@ frontend/
   Nota: Muchos buckets modernos tienen ACLs bloqueados, por lo que se usa política de bucket en lugar de ACLs.
 - Límites: máximo 5 imágenes por petición, 5MB por imagen. Formatos permitidos: JPEG, PNG, GIF, WEBP.
 
+## 🔍 SEO y Optimización para Motores de Búsqueda
+- **Metadata completa**: Todas las páginas incluyen títulos, descripciones y keywords optimizados.
+- **Open Graph y Twitter Cards**: Configurados para compartir en redes sociales.
+- **Structured Data (JSON-LD)**: Schema.org implementado para mejor indexación.
+- **Sitemap dinámico**: Generado automáticamente en `/sitemap.xml`.
+- **Robots.txt**: Configurado para controlar el acceso de crawlers.
+- **Canonical URLs**: Implementadas para evitar contenido duplicado.
+- **Páginas privadas**: Marcadas con `noindex` (login, perfil, crear-peticion, etc.).
+- **SEO dinámico**: Las páginas de detalle de peticiones incluyen metadata específica con imágenes y videos.
+
+**Configuración**: Agrega `NEXT_PUBLIC_SITE_URL` en `.env` del frontend con la URL completa de tu sitio (ej: `https://elconsejodehombres.net`).
+
 ## 🧭 Roadmap sugerido
 - Mejorar UX (estado global de sesión, toasts, skeleton loaders).
 - Documentar API con Swagger/OpenAPI.

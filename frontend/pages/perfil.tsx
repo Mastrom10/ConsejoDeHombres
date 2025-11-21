@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Header from '../components/Header';
+import SEO from '../components/SEO';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 
@@ -68,8 +69,15 @@ export default function Perfil() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+    <>
+      <SEO
+        title="Mi Expediente"
+        description="Tu perfil y expediente en el Consejo de Hombres. Revisa tu información, validaciones y estado de membresía."
+        url="/perfil"
+        noindex={true}
+      />
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
       <main className="flex-1 container mx-auto max-w-5xl p-4 py-12">
         <div className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
             <div>
@@ -213,6 +221,7 @@ export default function Perfil() {
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </>
   );
 }

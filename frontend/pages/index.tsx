@@ -3,6 +3,7 @@ import axios from 'axios';
 import Link from 'next/link';
 import Header from '../components/Header';
 import PeticionCard, { PeticionDto } from '../components/PeticionCard';
+import SEO from '../components/SEO';
 import { useRouter } from 'next/router';
 
 type User = {
@@ -33,8 +34,30 @@ export default function Home() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-background pb-12">
-      <Header />
+    <>
+      <SEO
+        title="Inicio"
+        description="Plataforma de deliberación y toma de decisiones colectivas. Participa en las peticiones del Consejo de Hombres y forma parte de las decisiones que moldean nuestra comunidad."
+        keywords="consejo de hombres, peticiones, votación, deliberación, democracia, decisiones colectivas, comunidad"
+        url="/"
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'WebSite',
+          name: 'El Consejo de Hombres',
+          url: process.env.NEXT_PUBLIC_SITE_URL || 'https://elconsejodehombres.net',
+          description: 'Plataforma de deliberación y toma de decisiones colectivas',
+          potentialAction: {
+            '@type': 'SearchAction',
+            target: {
+              '@type': 'EntryPoint',
+              urlTemplate: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://elconsejodehombres.net'}/?q={search_term_string}`
+            },
+            'query-input': 'required name=search_term_string'
+          }
+        }}
+      />
+      <div className="min-h-screen bg-background pb-12">
+        <Header />
       
       {/* Hero Banner */}
       <div className="relative h-72 sm:h-80 md:h-[22rem] lg:h-[24rem] w-full overflow-hidden border-b-4 border-slate-800 mb-12 shadow-2xl">
@@ -109,6 +132,7 @@ export default function Home() {
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </>
   );
 }

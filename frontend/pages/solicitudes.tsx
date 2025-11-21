@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Header from '../components/Header';
+import SEO from '../components/SEO';
 import { useRouter } from 'next/router';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -94,6 +95,13 @@ export default function Solicitudes() {
 
   return (
     <>
+      <SEO
+        title="Solicitudes de Adhesión"
+        description="Revisa las solicitudes de nuevos miembros que desean unirse al Consejo de Hombres. Participa en el proceso de votación y deliberación para aprobar o rechazar solicitudes."
+        keywords="solicitudes, adhesión, membresía, consejo de hombres, votación, aprobación"
+        url="/solicitudes"
+        noindex={true}
+      />
       <Header />
       <main className="min-h-screen bg-background">
         <div className="max-w-5xl mx-auto px-4 py-10 text-slate-100">

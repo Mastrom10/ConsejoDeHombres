@@ -274,5 +274,6 @@ export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
         </div>
       </div>
     </div>
+    </>
   );
 }

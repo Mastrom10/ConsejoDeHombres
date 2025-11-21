@@ -1,10 +1,38 @@
 import Header from '../components/Header';
+import SEO from '../components/SEO';
 import Link from 'next/link';
 
 export default function CodigoHombres() {
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <>
+      <SEO
+        title="Código Fundacional"
+        description="Código Fundacional del Consejo de Hombres. Estatuto Supremo de Conducta, Adhesión y Procedimiento. Conoce los principios, normas y valores que rigen nuestra comunidad."
+        keywords="código de hombres, estatuto, normas, principios, conducta, adhesión, procedimiento, consejo de hombres"
+        url="/codigo-hombres"
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: 'Código Fundacional del Consejo de Hombres',
+          description: 'Estatuto Supremo de Conducta, Adhesión y Procedimiento',
+          author: {
+            '@type': 'Organization',
+            name: 'El Consejo de Hombres'
+          },
+          publisher: {
+            '@type': 'Organization',
+            name: 'El Consejo de Hombres',
+            logo: {
+              '@type': 'ImageObject',
+              url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://elconsejodehombres.net'}/img/bannerConsejo.png`
+            }
+          },
+          datePublished: '2025-01-01',
+          dateModified: '2025-01-01'
+        }}
+      />
+      <div className="min-h-screen bg-background">
+        <Header />
       <main className="max-w-4xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-5xl md:text-6xl font-black uppercase tracking-tight mb-4 text-white">
@@ -310,7 +338,8 @@ export default function CodigoHombres() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
+    </>
   );
 }
 

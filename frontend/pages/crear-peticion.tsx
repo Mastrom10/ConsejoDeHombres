@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import Header from '../components/Header';
+import SEO from '../components/SEO';
 import Link from 'next/link';
 
 const API = process.env.NEXT_PUBLIC_API_URL;
@@ -144,8 +145,15 @@ export default function CrearPeticion() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+    <>
+      <SEO
+        title="Crear Petición"
+        description="Presenta tu caso ante el Consejo de Hombres. Crea una petición para ser votada por los miembros de la comunidad."
+        url="/crear-peticion"
+        noindex={true}
+      />
+      <div className="min-h-screen bg-background flex flex-col">
+        <Header />
       <main className="flex-1 container mx-auto max-w-2xl p-4 py-12">
         <h1 className="text-3xl mb-2 text-white">Crear Petición</h1>
         <p className="text-secondary mb-8">Presenta tu caso ante el Consejo. Sé claro y respetuoso.</p>
@@ -246,6 +254,7 @@ export default function CrearPeticion() {
           </div>
         </form>
       </main>
-    </div>
+      </div>
+    </>
   );
 }

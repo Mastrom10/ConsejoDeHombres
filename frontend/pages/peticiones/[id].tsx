@@ -2,6 +2,7 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Header from '../../components/Header';
+import SEO from '../../components/SEO';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -185,10 +186,54 @@ export default function PeticionDetalle() {
   };
 
   const videoEmbed = peticion.videoUrl ? getVideoEmbedUrl(peticion.videoUrl) : null;
+  
+  const primeraImagen = peticion.imagenes && peticion.imagenes.length > 0 ? peticion.imagenes[0] : null;
+  const imagenSEO = primeraImagen || '/img/bannerConsejo.png';
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <>
+      <SEO
+        title={peticion.titulo}
+        description={peticion.descripcion?.substring(0, 160) || `Petición del Consejo de Hombres: ${peticion.titulo}`}
+        keywords={`petición, consejo de hombres, ${peticion.titulo}, votación, deliberación`}
+        image={imagenSEO}
+        url={`/peticiones/${peticion.id}`}
+        type="article"
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: peticion.titulo,
+          description: peticion.descripcion?.substring(0, 160) || '',
+          author: {
+            '@type': 'Person',
+            name: peticion.autor?.displayName || 'Anónimo'
+          },
+          publisher: {
+            '@type': 'Organization',
+            name: 'El Consejo de Hombres',
+            logo: {
+              '@type': 'ImageObject',
+              url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://elconsejodehombres.net'}/img/bannerConsejo.png`
+            }
+          },
+          datePublished: peticion.createdAt,
+          dateModified: peticion.fechaResolucion || peticion.createdAt,
+          ...(primeraImagen && {
+            image: {
+              '@type': 'ImageObject',
+              url: primeraImagen
+            }
+          }),
+          ...(peticion.videoUrl && {
+            video: {
+              '@type': 'VideoObject',
+              url: peticion.videoUrl
+            }
+          })
+        }}
+      />
+      <div className="min-h-screen bg-background">
+        <Header />
       <main className="max-w-5xl mx-auto px-4 py-10 text-slate-100">
         <div className="card space-y-6">
           <header className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
@@ -461,6 +506,7 @@ export default function PeticionDetalle() {
           </section>
         </div>
       </main>
-    </div>
+      </div>
+    </>
   );
 }
