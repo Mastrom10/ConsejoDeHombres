@@ -134,8 +134,9 @@ export default function Header() {
               <Link href="/perfil" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Expediente</Link>
               {isApproved && estadoVotos && (
                 <div className="flex items-center gap-2 px-3 py-1 rounded border border-slate-600 bg-slate-800/50">
-                  <span className="text-xs font-bold text-slate-300">
-                    🗳️ {estadoVotos.votosDisponibles}/{estadoVotos.maxVotos}
+                  <span className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                    <span>🗳️</span>
+                    <span>{estadoVotos.votosDisponibles}/{estadoVotos.maxVotos}</span>
                   </span>
                   {estadoVotos.votosDisponibles < estadoVotos.maxVotos && tiempoRestante > 0 && (
                     <span className="text-xs text-slate-400 font-mono">

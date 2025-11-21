@@ -17,6 +17,7 @@ export type PeticionDto = {
   autorId?: string;
   createdAt?: string;
   miVoto?: 'aprobar' | 'rechazar' | 'debatir' | null;
+  imagenes?: string[];
 };
 
 export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
@@ -26,6 +27,8 @@ export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
   const [marcandoRelevante, setMarcandoRelevante] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(peticion.likes);
+  const [mostrarModalRechazo, setMostrarModalRechazo] = useState(false);
+  const [comentarioRechazo, setComentarioRechazo] = useState('');
   
   const totalVotos = peticion.totalAprobaciones + peticion.totalRechazos;
   const porcentaje = totalVotos > 0 
@@ -56,11 +59,24 @@ export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
     e.stopPropagation();
     if (!canVote || votando) return;
     
+    // Si es rechazar, mostrar modal para comentario obligatorio
+    if (tipoVoto === 'rechazar') {
+      setMostrarModalRechazo(true);
+      return;
+    }
+    
+    // Si es aprobar, votar directamente
+    await enviarVoto('aprobar', undefined);
+  };
+
+  const enviarVoto = async (tipoVoto: 'aprobar' | 'rechazar', mensaje?: string) => {
+    if (!canVote || votando) return;
+    
     setVotando(true);
     try {
       await axios.post(
         `${API}/peticiones/${peticion.id}/votar`,
-        { tipoVoto, mensaje: tipoVoto === 'rechazar' ? 'Voto en contra desde tarjeta' : undefined },
+        { tipoVoto, mensaje },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       // Recargar la página para actualizar los contadores
@@ -71,6 +87,16 @@ export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
     } finally {
       setVotando(false);
     }
+  };
+
+  const handleConfirmarRechazo = () => {
+    if (!comentarioRechazo || comentarioRechazo.trim().length < 4) {
+      alert('El comentario es obligatorio y debe tener al menos 4 caracteres.');
+      return;
+    }
+    setMostrarModalRechazo(false);
+    enviarVoto('rechazar', comentarioRechazo);
+    setComentarioRechazo('');
   };
 
   const handleMarcarRelevante = async (e: React.MouseEvent) => {
@@ -104,12 +130,74 @@ export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
 
   if (reported) return null; // Ocultar localmente si se reporta con éxito
 
+  const primeraImagen = peticion.imagenes && peticion.imagenes.length > 0 ? peticion.imagenes[0] : null;
+
   return (
-    <div 
-      className="card group hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 relative cursor-pointer"
-      onClick={handleCardClick}
-    >
-      <div className="flex justify-between items-start mb-4">
+    <>
+      {/* Modal para comentario de rechazo */}
+      {mostrarModalRechazo && (
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setMostrarModalRechazo(false);
+              setComentarioRechazo('');
+            }
+          }}
+        >
+          <div 
+            className="bg-slate-900 border border-slate-700 rounded-xl p-6 max-w-md w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold text-white mb-2">Comentario obligatorio</h3>
+            <p className="text-sm text-slate-400 mb-4">
+              Para rechazar una petición, debes proporcionar un comentario explicando el motivo (mínimo 4 caracteres).
+            </p>
+            <textarea
+              value={comentarioRechazo}
+              onChange={(e) => setComentarioRechazo(e.target.value)}
+              placeholder="Escribe tu comentario aquí..."
+              className="w-full input bg-slate-800 border-slate-600 mb-4 min-h-[100px] resize-none"
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setMostrarModalRechazo(false);
+                  setComentarioRechazo('');
+                }}
+                className="btn btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmarRechazo}
+                disabled={!comentarioRechazo || comentarioRechazo.trim().length < 4}
+                className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Rechazar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div 
+        className="card group hover:shadow-2xl hover:shadow-primary/10 transition-all duration-300 relative cursor-pointer overflow-hidden"
+        onClick={handleCardClick}
+      >
+        {/* Imagen destacada si existe */}
+        {primeraImagen && (
+          <div className="w-full h-48 overflow-hidden bg-slate-800 -mx-4 -mt-4 mb-4">
+            <img 
+              src={primeraImagen} 
+              alt={peticion.titulo}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+        )}
+
+        <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center overflow-hidden border border-slate-600 flex-shrink-0">
             {peticion.autor.avatarUrl ? (

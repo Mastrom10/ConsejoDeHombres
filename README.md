@@ -43,7 +43,7 @@ frontend/
 ## 🚀 Puesta en marcha
 1. **Variables**: copia `.env.example` → `.env` en `backend/` y `frontend/` y ajusta credenciales:
    - **Backend**: Google OAuth, JWT, admin inicial, PostgreSQL, AWS S3 (para almacenamiento de imágenes).
-   - **Frontend**: URL del backend API.
+   - **Frontend**: URL del backend API, Google Analytics Measurement ID (opcional, formato: `G-XXXXXXXXXX`).
    - Por defecto se crea `admin@elconsejodehombres.net` con contraseña `Merluza23!`.
 2. **Docker compose** (recomendado):
    ```bash
@@ -67,6 +67,7 @@ frontend/
 - Feed de peticiones, vista de solicitudes pendientes, formulario de creación y detalle con voto sí/no.
 - Panel admin con dashboard y ABM, protegido por rol.
 - Utiliza `NEXT_PUBLIC_API_URL` para apuntar al backend.
+- **Google Analytics**: Integrado automáticamente. Configura `NEXT_PUBLIC_GA_MEASUREMENT_ID` en `.env` con tu Measurement ID (formato: `G-XXXXXXXXXX`). El tracking de páginas se realiza automáticamente en todas las rutas.
 
 ## 📜 Seguridad y buenas prácticas
 - JWT para todas las rutas privadas, middlewares de rol/estado, rate limiting y helmet.
