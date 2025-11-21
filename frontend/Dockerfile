@@ -6,9 +6,11 @@ COPY components ./components
 COPY styles ./styles
 COPY public ./public
 
-# Definir argumento de construcción para la URL de la API
+# Definir argumentos de construcción para variables de entorno
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
 
 RUN npm install
 RUN npm run build
