@@ -191,72 +191,74 @@ export default function PeticionDetalle() {
             </div>
           )}
 
-          <section className="border-t border-slate-700 pt-6 space-y-4">
-            <h2 className="text-lg font-bold text-slate-100">Tu veredicto</h2>
-            {!isApproved && (
-              <p className="text-xs text-secondary">
-                Solo los miembros aprobados pueden votar sobre esta petición.
-              </p>
-            )}
-            {miVotoActual && (
-              <p className="text-xs text-amber-400 bg-amber-900/20 border border-amber-500/30 rounded-lg px-3 py-2">
-                Ya has {miVotoActual === 'aprobar' ? 'aprobado' : miVotoActual === 'rechazar' ? 'rechazado' : 'comentado'} esta petición. Puedes cambiar tu opinión.
-              </p>
-            )}
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                className={`btn ${voto === 'aprobar' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => canVote && setVoto('aprobar')}
+          {canVote && (
+            <section className="border-t border-slate-700 pt-6 space-y-4">
+              <h2 className="text-lg font-bold text-slate-100">Tu veredicto</h2>
+              {!isApproved && (
+                <p className="text-xs text-secondary">
+                  Solo los miembros aprobados pueden votar sobre esta petición.
+                </p>
+              )}
+              {miVotoActual && (
+                <p className="text-xs text-amber-400 bg-amber-900/20 border border-amber-500/30 rounded-lg px-3 py-2">
+                  Ya has {miVotoActual === 'aprobar' ? 'aprobado' : miVotoActual === 'rechazar' ? 'rechazado' : 'comentado'} esta petición. Puedes cambiar tu opinión.
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  className={`btn ${voto === 'aprobar' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => canVote && setVoto('aprobar')}
+                  disabled={!canVote}
+                >
+                  👍 Aprobar
+                </button>
+                <button
+                  className={`btn ${voto === 'rechazar' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => canVote && setVoto('rechazar')}
+                  disabled={!canVote}
+                >
+                  👎 Rechazar
+                </button>
+                <button
+                  className={`btn ${voto === 'debatir' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => canVote && setVoto('debatir')}
+                  disabled={!canVote}
+                  title="Comentar sin votar. Aparecerá en el historial pero no contará como voto."
+                >
+                  💬 Debatir
+                </button>
+              </div>
+              <textarea
+                rows={3}
+                className="input bg-slate-900/70 mt-2"
+                placeholder={
+                  canVote
+                    ? voto === 'debatir' 
+                      ? 'Escribe tu comentario o argumento (obligatorio)'
+                      : voto === 'rechazar'
+                      ? 'Comentario (obligatorio si rechazas)'
+                      : 'Comentario opcional'
+                    : 'Debes ser miembro aprobado para emitir tu veredicto.'
+                }
+                value={comentario}
+                onChange={(e) => setComentario(e.target.value)}
                 disabled={!canVote}
-              >
-                👍 Aprobar
-              </button>
+                required={voto === 'rechazar' || voto === 'debatir'}
+              />
               <button
-                className={`btn ${voto === 'rechazar' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => canVote && setVoto('rechazar')}
-                disabled={!canVote}
+                className="btn btn-primary w-full md:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={votar}
+                disabled={!canVote || (voto !== 'aprobar' && (!comentario || comentario.length < 4))}
               >
-                👎 Rechazar
+                {miVotoActual ? 'Actualizar ' : 'Enviar '}{voto === 'debatir' ? 'comentario' : 'voto'}
               </button>
-              <button
-                className={`btn ${voto === 'debatir' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => canVote && setVoto('debatir')}
-                disabled={!canVote}
-                title="Comentar sin votar. Aparecerá en el historial pero no contará como voto."
-              >
-                💬 Debatir
-              </button>
-            </div>
-            <textarea
-              rows={3}
-              className="input bg-slate-900/70 mt-2"
-              placeholder={
-                canVote
-                  ? voto === 'debatir' 
-                    ? 'Escribe tu comentario o argumento (obligatorio)'
-                    : voto === 'rechazar'
-                    ? 'Comentario (obligatorio si rechazas)'
-                    : 'Comentario opcional'
-                  : 'Debes ser miembro aprobado para emitir tu veredicto.'
-              }
-              value={comentario}
-              onChange={(e) => setComentario(e.target.value)}
-              disabled={!canVote}
-              required={voto === 'rechazar' || voto === 'debatir'}
-            />
-            <button
-              className="btn btn-primary w-full md:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
-              onClick={votar}
-              disabled={!canVote || (voto !== 'aprobar' && (!comentario || comentario.length < 4))}
-            >
-              {miVotoActual ? 'Actualizar ' : 'Enviar '}{voto === 'debatir' ? 'comentario' : 'voto'}
-            </button>
-            {mensaje && (
-              <p className="mt-2 text-sm text-slate-200 bg-slate-900/60 border border-slate-700 rounded-lg px-3 py-2">
-                {mensaje}
-              </p>
-            )}
-          </section>
+              {mensaje && (
+                <p className="mt-2 text-sm text-slate-200 bg-slate-900/60 border border-slate-700 rounded-lg px-3 py-2">
+                  {mensaje}
+                </p>
+              )}
+            </section>
+          )}
 
           <section className="border-t border-slate-700 pt-6 space-y-3">
             <div className="flex items-center justify-between">

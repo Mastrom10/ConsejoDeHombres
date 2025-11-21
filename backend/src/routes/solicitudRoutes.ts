@@ -8,11 +8,54 @@ import { EstadoMiembro, EstadoSolicitud } from '@prisma/client';
 const router = Router();
 
 router.get('/', async (_req, res) => {
+  // Obtener solicitudes existentes
   const solicitudes = await prisma.solicitudMiembro.findMany({
     include: { usuario: true },
     orderBy: { fechaCreacion: 'desc' }
   });
-  res.json(solicitudes);
+
+  // Obtener usuarios pendientes que no tengan solicitud
+  const usuariosPendientes = await prisma.usuario.findMany({
+    where: {
+      estadoMiembro: EstadoMiembro.pendiente_aprobacion,
+      solicitudes: {
+        none: {}
+      }
+    },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  // Crear solicitudes "virtuales" para usuarios pendientes sin solicitud
+  const solicitudesVirtuales = usuariosPendientes.map(usuario => ({
+    id: `virtual-${usuario.id}`,
+    usuarioId: usuario.id,
+    textoSolicitud: `Solicitud de ingreso de ${usuario.displayName}. Usuario registrado el ${new Date(usuario.createdAt).toLocaleDateString()}.`,
+    fotoSolicitudUrl: usuario.avatarUrl || '/img/default-avatar.png',
+    estadoSolicitud: 'pendiente' as EstadoSolicitud,
+    fechaCreacion: usuario.createdAt,
+    fechaResolucion: null as Date | null,
+    totalAprobaciones: 0,
+    totalRechazos: 0,
+    usuario: {
+      id: usuario.id,
+      displayName: usuario.displayName,
+      avatarUrl: usuario.avatarUrl,
+      email: usuario.email
+    },
+    esVirtual: true // Flag para identificar solicitudes virtuales
+  }));
+
+  // Combinar solicitudes reales y virtuales
+  const todasLasSolicitudes = [
+    ...solicitudes.map(s => ({ ...s, esVirtual: false })),
+    ...solicitudesVirtuales
+  ].sort((a, b) => {
+    const fechaA = a.fechaCreacion.getTime();
+    const fechaB = b.fechaCreacion.getTime();
+    return fechaB - fechaA;
+  });
+
+  res.json(todasLasSolicitudes);
 });
 
 router.post('/', authenticate, async (req, res, next) => {
@@ -34,7 +77,32 @@ router.post('/', authenticate, async (req, res, next) => {
 router.post('/:id/votar', authenticate, requireMember, async (req, res, next) => {
   try {
     const parsed = votoSolicitudSchema.parse(req.body);
-    const solicitudId = req.params.id;
+    let solicitudId = req.params.id;
+
+    // Si es una solicitud virtual, crear la solicitud real primero
+    let solicitud = null;
+    if (solicitudId.startsWith('virtual-')) {
+      const usuarioId = solicitudId.replace('virtual-', '');
+      const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
+      if (!usuario || usuario.estadoMiembro !== EstadoMiembro.pendiente_aprobacion) {
+        return res.status(404).json({ message: 'Usuario no encontrado o ya procesado' });
+      }
+      
+      // Crear la solicitud real
+      solicitud = await prisma.solicitudMiembro.create({
+        data: {
+          usuarioId: usuario.id,
+          textoSolicitud: `Solicitud de ingreso de ${usuario.displayName}. Usuario registrado el ${new Date(usuario.createdAt).toLocaleDateString()}.`,
+          fotoSolicitudUrl: usuario.avatarUrl || '/img/default-avatar.png'
+        }
+      });
+      solicitudId = solicitud.id;
+    } else {
+      solicitud = await prisma.solicitudMiembro.findUnique({ where: { id: solicitudId } });
+      if (!solicitud) {
+        return res.status(404).json({ message: 'Solicitud no encontrada' });
+      }
+    }
 
     // Limitar a 3 validaciones (aprobar) por día y por usuario
     if (parsed.tipoVoto === 'aprobar') {
@@ -59,7 +127,6 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
         mensaje: parsed.mensaje
       }
     });
-    const solicitud = await prisma.solicitudMiembro.findUnique({ where: { id: solicitudId } });
     const totalUsuarios = await prisma.usuario.count();
     const requiredValidations = requiredValidationsByUserCount(totalUsuarios);
     const totals = {
