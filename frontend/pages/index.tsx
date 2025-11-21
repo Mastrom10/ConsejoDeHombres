@@ -40,13 +40,13 @@ export default function Home() {
       <Header />
       
       {/* Hero Banner */}
-      <div className="relative h-80 md:h-96 w-full overflow-hidden border-b-4 border-slate-800 mb-12 shadow-2xl">
+      <div className="relative h-72 sm:h-80 md:h-[22rem] lg:h-[24rem] w-full overflow-hidden border-b-4 border-slate-800 mb-12 shadow-2xl">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/50 to-background z-10"></div>
         {/* Imagen Local */}
         <img 
-          src="/img/PatricioConsejo.jpg" 
+          src="/img/bannerConsejo.png" 
           alt="Consejo Banner" 
-          className="w-full h-full object-cover object-top opacity-90 contrast-125 grayscale-[20%]"
+          className="w-full h-full object-cover object-center opacity-90 contrast-125 grayscale-[20%]"
         />
         <div className="absolute bottom-0 left-0 z-20 w-full p-6 md:p-12 pb-16">
           <div className="max-w-6xl mx-auto text-center md:text-left">

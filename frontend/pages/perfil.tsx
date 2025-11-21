@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
 import Header from '../components/Header';
+import axios from 'axios';
+import { useRouter } from 'next/router';
+
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 type User = {
   displayName: string;
@@ -13,6 +17,7 @@ type User = {
 
 export default function Perfil() {
   const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
   
   // Simulación de votos para el ejemplo (el backend debería enviarlo en 'solicitudes')
   // En un caso real, haríamos un fetch a /solicitudes/me
@@ -41,6 +46,25 @@ export default function Perfil() {
 
   const getInitials = (name: string) => {
     return name ? name.substring(0, 2).toUpperCase() : '??';
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!confirm('¿Seguro que quieres borrar tu cuenta? Esta acción es irreversible.')) return;
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.replace('/login');
+        return;
+      }
+      await axios.delete(`${API}/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      router.replace('/login');
+    } catch (_e) {
+      alert('No se pudo borrar la cuenta. Intenta más tarde.');
+    }
   };
 
   return (
@@ -167,6 +191,23 @@ export default function Perfil() {
                         <div className="text-[10px] uppercase tracking-widest text-slate-500">Honor</div>
                     </div>
                  </div>
+              </div>
+
+              {/* Borrar cuenta */}
+              <div className="card border border-red-900/50 bg-red-950/40">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-black uppercase tracking-widest text-red-400">Autodestrucción del Expediente</h3>
+                  <span className="text-xs text-red-400 font-mono border border-red-500/50 px-2 py-0.5 rounded">ACCION FINAL</span>
+                </div>
+                <p className="text-sm text-red-200/80 mb-4">
+                  Esta operación eliminará tu cuenta del Consejo, junto con tus votos, solicitudes y peticiones. No hay marcha atrás.
+                </p>
+                <button
+                  onClick={handleDeleteAccount}
+                  className="btn btn-secondary border-red-600/60 text-red-300 hover:bg-red-800/40 hover:text-red-100"
+                >
+                  🧨 Borrar cuenta y abandonar el Consejo
+                </button>
               </div>
             </div>
           </div>

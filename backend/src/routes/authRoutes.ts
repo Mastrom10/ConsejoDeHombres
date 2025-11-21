@@ -126,4 +126,25 @@ router.get('/me', authenticate, async (req, res, next) => {
   }
 });
 
+router.delete('/me', authenticate, async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+
+    await prisma.$transaction([
+      prisma.peticionLike.deleteMany({ where: { usuarioId: userId } }),
+      prisma.peticionVotoReaction.deleteMany({ where: { usuarioId: userId } }),
+      prisma.peticionVoto.deleteMany({ where: { miembroVotanteId: userId } }),
+      prisma.solicitudVoto.deleteMany({ where: { miembroVotanteId: userId } }),
+      prisma.reporte.deleteMany({ where: { autorId: userId } }),
+      prisma.solicitudMiembro.deleteMany({ where: { usuarioId: userId } }),
+      prisma.peticion.deleteMany({ where: { autorId: userId } }),
+      prisma.usuario.delete({ where: { id: userId } })
+    ]);
+
+    res.status(204).send();
+  } catch (e) {
+    next(e);
+  }
+});
+
 export default router;

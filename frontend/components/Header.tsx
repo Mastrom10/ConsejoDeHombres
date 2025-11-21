@@ -35,14 +35,18 @@ export default function Header() {
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
            <span className="text-2xl group-hover:animate-pulse">⚔️</span>
-           <span className="text-xl font-black uppercase tracking-widest bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent">
-             El Consejo
+           <span className="text-sm sm:text-base md:text-xl font-black uppercase tracking-[0.25em] bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent">
+             El Consejo de Hombres
            </span>
         </Link>
         
         <nav className="hidden md:flex items-center gap-6 text-xs font-bold tracking-widest uppercase text-slate-400">
-          <Link href="/" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Peticiones</Link>
-          <Link href="/solicitudes" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Solicitudes</Link>
+          {isLoggedIn && (
+            <>
+              <Link href="/" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Peticiones</Link>
+              <Link href="/solicitudes" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Solicitudes</Link>
+            </>
+          )}
           {isLoggedIn ? (
             <>
               {isApproved ? (

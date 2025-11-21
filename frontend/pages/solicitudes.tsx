@@ -37,27 +37,64 @@ export default function Solicitudes() {
   return (
     <>
       <Header />
-      <div className="container">
-        <h1>Solicitudes pendientes</h1>
-        <div className="grid">
-          {solicitudes.map((s) => (
-            <div className="card" key={s.id}>
-              <div className="flex-between">
-                <div>
-                  <h3>{s.usuario.displayName}</h3>
-                  <small>{s.estadoSolicitud}</small>
-                </div>
-                <img src={s.fotoSolicitudUrl} alt="Solicitud" style={{ width: 80, borderRadius: 10 }} />
-              </div>
-              <p>{s.textoSolicitud}</p>
-              <div className="flex" style={{ gap: 8 }}>
-                <span>👍 {s.totalAprobaciones}</span>
-                <span>👎 {s.totalRechazos}</span>
-              </div>
+      <main className="min-h-screen bg-background">
+        <div className="max-w-5xl mx-auto px-4 py-10 text-slate-100">
+          <header className="border-b border-slate-800 pb-6 mb-8">
+            <p className="text-xs font-mono text-primary/70 tracking-[0.3em] uppercase mb-2">
+              Cámara de Ingreso
+            </p>
+            <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight">
+              Solicitudes de Adhesión
+            </h1>
+            <p className="text-sm text-secondary mt-2 max-w-2xl">
+              Aquí se listan los aspirantes que buscan ingresar al Consejo. Tu voto ayuda a decidir
+              quién se sienta en la mesa.
+            </p>
+          </header>
+
+          {solicitudes.length === 0 ? (
+            <div className="card text-center">
+              <h2 className="text-xl font-bold mb-2">Sin solicitudes de ingreso</h2>
+              <p className="text-secondary text-sm">
+                Por ahora, ningún mortal ha solicitado su ascenso al Consejo.
+              </p>
             </div>
-          ))}
+          ) : (
+            <div className="grid gap-6">
+              {solicitudes.map((s) => (
+                <article key={s.id} className="card flex flex-col md:flex-row gap-4">
+                  <div className="flex-shrink-0">
+                    <img
+                      src={s.fotoSolicitudUrl}
+                      alt="Solicitud"
+                      className="w-32 h-32 object-cover rounded-md border border-slate-700"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-lg font-bold text-white">
+                          Aspirante: {s.usuario.displayName}
+                        </h3>
+                        <p className="text-xs text-secondary">
+                          Estado actual: {s.estadoSolicitud.toUpperCase()}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-200 whitespace-pre-line">
+                      {s.textoSolicitud}
+                    </p>
+                    <div className="flex gap-4 text-xs text-secondary mt-2">
+                      <span>👍 {s.totalAprobaciones} a favor</span>
+                      <span>👎 {s.totalRechazos} en contra</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
-      </div>
+      </main>
     </>
   );
 }

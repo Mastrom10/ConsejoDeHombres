@@ -16,6 +16,11 @@ type VotoConAutor = {
   myReaction: 'up' | 'down' | null;
 };
 
+type User = {
+  id: string;
+  estadoMiembro: string;
+};
+
 export default function PeticionDetalle() {
   const router = useRouter();
   const { id } = router.query;
@@ -27,6 +32,8 @@ export default function PeticionDetalle() {
   const [reportando, setReportando] = useState(false);
   const [mensajeReporte, setMensajeReporte] = useState('');
   const [textoReporte, setTextoReporte] = useState('');
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -35,6 +42,16 @@ export default function PeticionDetalle() {
     if (!token) {
       router.replace('/login');
       return;
+    }
+    setIsLoggedIn(true);
+
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        setUser(JSON.parse(userStr));
+      } catch {
+        setUser(null);
+      }
     }
 
     axios
@@ -48,9 +65,14 @@ export default function PeticionDetalle() {
       .catch(() => setMensaje('No se pudo cargar la petición.'));
   }, [id, router]);
 
+  const isApproved = user?.estadoMiembro === 'miembro_aprobado';
+  const canVote = isLoggedIn && isApproved && peticion && user && peticion.autorId !== user.id;
+  const canReact = isLoggedIn && isApproved;
+
   const votar = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token || !canVote) return;
       await axios.post(
         `${API}/peticiones/${id}/votar`,
         { tipoVoto: voto, mensaje: comentario },
@@ -85,6 +107,7 @@ export default function PeticionDetalle() {
   };
 
   const reaccionar = async (votoId: string, tipo: 'up' | 'down') => {
+    if (!canReact) return;
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -161,16 +184,23 @@ export default function PeticionDetalle() {
 
           <section className="border-t border-slate-700 pt-6 space-y-4">
             <h2 className="text-lg font-bold text-slate-100">Tu veredicto</h2>
+            {!isApproved && (
+              <p className="text-xs text-secondary">
+                Solo los miembros aprobados pueden votar sobre esta petición.
+              </p>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <button
                 className={`btn ${voto === 'aprobar' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setVoto('aprobar')}
+                onClick={() => canVote && setVoto('aprobar')}
+                disabled={!canVote}
               >
                 👍 Aprobar
               </button>
               <button
                 className={`btn ${voto === 'rechazar' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setVoto('rechazar')}
+                onClick={() => canVote && setVoto('rechazar')}
+                disabled={!canVote}
               >
                 👎 Rechazar
               </button>
@@ -178,11 +208,20 @@ export default function PeticionDetalle() {
             <textarea
               rows={3}
               className="input bg-slate-900/70 mt-2"
-              placeholder="Comentario (obligatorio si rechazas)"
+              placeholder={
+                canVote
+                  ? 'Comentario (obligatorio si rechazas)'
+                  : 'Debes ser miembro aprobado para emitir tu veredicto.'
+              }
               value={comentario}
               onChange={(e) => setComentario(e.target.value)}
+              disabled={!canVote}
             />
-            <button className="btn btn-primary w-full md:w-auto" onClick={votar}>
+            <button
+              className="btn btn-primary w-full md:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
+              onClick={votar}
+              disabled={!canVote}
+            >
               Enviar voto
             </button>
             {mensaje && (
@@ -301,6 +340,7 @@ export default function PeticionDetalle() {
                             : 'border-slate-600 hover:border-green-500/70 hover:text-green-300'
                         }`}
                         onClick={() => reaccionar(v.id, 'up')}
+                        disabled={!canReact}
                       >
                         <span>👍</span>
                         <span>{v.upCount}</span>
@@ -312,6 +352,7 @@ export default function PeticionDetalle() {
                             : 'border-slate-600 hover:border-red-500/70 hover:text-red-300'
                         }`}
                         onClick={() => reaccionar(v.id, 'down')}
+                        disabled={!canReact}
                       >
                         <span>👎</span>
                         <span>{v.downCount}</span>
