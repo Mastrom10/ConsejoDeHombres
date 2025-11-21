@@ -183,16 +183,37 @@ router.put('/usuarios/:id', async (req, res, next) => {
 router.delete('/usuarios/:id', async (req, res, next) => {
   try {
     const userId = req.params.id;
-    await prisma.$transaction([
+    
+    // Primero obtener las IDs de las solicitudes del usuario para eliminar sus votos
+    const solicitudesDelUsuario = await prisma.solicitudMiembro.findMany({
+      where: { usuarioId: userId },
+      select: { id: true }
+    });
+    const solicitudIds = solicitudesDelUsuario.map(s => s.id);
+    
+    // Construir el array de operaciones
+    const operations: any[] = [
       prisma.peticionLike.deleteMany({ where: { usuarioId: userId } }),
       prisma.peticionVotoReaction.deleteMany({ where: { usuarioId: userId } }),
       prisma.peticionVoto.deleteMany({ where: { miembroVotanteId: userId } }),
+      // Eliminar votos donde el usuario es el votante
       prisma.solicitudVoto.deleteMany({ where: { miembroVotanteId: userId } }),
-      prisma.reporte.deleteMany({ where: { autorId: userId } }),
+      prisma.reporte.deleteMany({ where: { autorId: userId } })
+    ];
+    
+    // Eliminar votos de las solicitudes del usuario (donde otros votaron sus solicitudes)
+    if (solicitudIds.length > 0) {
+      operations.push(prisma.solicitudVoto.deleteMany({ where: { solicitudId: { in: solicitudIds } } }));
+    }
+    
+    // Ahora sí podemos eliminar las solicitudes y el resto
+    operations.push(
       prisma.solicitudMiembro.deleteMany({ where: { usuarioId: userId } }),
       prisma.peticion.deleteMany({ where: { autorId: userId } }),
       prisma.usuario.delete({ where: { id: userId } })
-    ]);
+    );
+    
+    await prisma.$transaction(operations);
     res.status(204).send();
   } catch (e) {
     next(e);
