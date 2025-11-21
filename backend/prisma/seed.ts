@@ -4,9 +4,10 @@ import bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@consejo.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'cocacola';
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@elconsejodehombres.net';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'Merluza23!';
   const passwordHash = await bcrypt.hash(adminPassword, 10);
+
   await prisma.configuracion.upsert({
     where: { id: 1 },
     create: {},
