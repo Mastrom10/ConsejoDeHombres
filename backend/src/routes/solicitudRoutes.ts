@@ -4,6 +4,7 @@ import { prisma } from '../config/prisma';
 import { solicitudSchema, votoSolicitudSchema } from '../dtos/solicitudDtos';
 import { evaluateThreshold, requiredValidationsByUserCount } from '../services/rulesService';
 import { EstadoMiembro, EstadoSolicitud } from '@prisma/client';
+import { consumirVoto } from '../services/votosService';
 
 const router = Router();
 
@@ -104,8 +105,25 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
       }
     }
 
+    // Verificar si ya votó esta solicitud
+    const votoExistente = await prisma.solicitudVoto.findFirst({
+      where: {
+        solicitudId,
+        miembroVotanteId: req.user!.id
+      }
+    });
+
+    // Solo consumir voto si es un voto nuevo
+    const esVotoNuevo = !votoExistente;
+    if (esVotoNuevo) {
+      const tieneVoto = await consumirVoto(req.user!.id);
+      if (!tieneVoto) {
+        return res.status(429).json({ message: 'No tienes votos disponibles. Espera a que se regeneren.' });
+      }
+    }
+
     // Limitar a 3 validaciones (aprobar) por día y por usuario
-    if (parsed.tipoVoto === 'aprobar') {
+    if (parsed.tipoVoto === 'aprobar' && esVotoNuevo) {
       const inicioHoy = new Date();
       inicioHoy.setUTCHours(0, 0, 0, 0);
       const aprobacionesHoy = await prisma.solicitudVoto.count({
@@ -119,14 +137,29 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
         return res.status(429).json({ message: 'Has alcanzado el máximo de 3 validaciones diarias.' });
       }
     }
-    const voto = await prisma.solicitudVoto.create({
-      data: {
-        solicitudId,
-        miembroVotanteId: req.user!.id,
-        tipoVoto: parsed.tipoVoto,
-        mensaje: parsed.mensaje
-      }
-    });
+    
+    let voto;
+    if (votoExistente) {
+      // Actualizar voto existente
+      voto = await prisma.solicitudVoto.update({
+        where: { id: votoExistente.id },
+        data: {
+          tipoVoto: parsed.tipoVoto,
+          mensaje: parsed.mensaje,
+          fechaVoto: new Date()
+        }
+      });
+    } else {
+      // Crear nuevo voto
+      voto = await prisma.solicitudVoto.create({
+        data: {
+          solicitudId,
+          miembroVotanteId: req.user!.id,
+          tipoVoto: parsed.tipoVoto,
+          mensaje: parsed.mensaje
+        }
+      });
+    }
     const totalUsuarios = await prisma.usuario.count();
     const requiredValidations = requiredValidationsByUserCount(totalUsuarios);
     const totals = {

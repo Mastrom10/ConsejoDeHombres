@@ -80,18 +80,28 @@ router.get('/config', async (_req, res, next) => {
 
 router.put('/config', async (req, res, next) => {
   try {
-    const { minVotosSolicitud, minVotosPeticion, porcentajeAprobacion } = req.body;
+    const { 
+      minVotosSolicitud, 
+      minVotosPeticion, 
+      porcentajeAprobacion,
+      maxVotosDisponibles,
+      minutosRegeneracionVoto
+    } = req.body;
     const config = await prisma.configuracion.upsert({
       where: { id: 1 },
       create: {
         minVotosPeticion: minVotosPeticion ?? 100,
         minVotosSolicitud: minVotosSolicitud ?? 10,
-        porcentajeAprobacion: porcentajeAprobacion ?? 70
+        porcentajeAprobacion: porcentajeAprobacion ?? 70,
+        maxVotosDisponibles: maxVotosDisponibles ?? 10,
+        minutosRegeneracionVoto: minutosRegeneracionVoto ?? 2
       },
       update: {
-        minVotosPeticion,
-        minVotosSolicitud,
-        porcentajeAprobacion
+        ...(minVotosPeticion !== undefined && { minVotosPeticion }),
+        ...(minVotosSolicitud !== undefined && { minVotosSolicitud }),
+        ...(porcentajeAprobacion !== undefined && { porcentajeAprobacion }),
+        ...(maxVotosDisponibles !== undefined && { maxVotosDisponibles }),
+        ...(minutosRegeneracionVoto !== undefined && { minutosRegeneracionVoto })
       }
     });
     res.json(config);

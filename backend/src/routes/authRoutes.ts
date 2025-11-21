@@ -7,6 +7,7 @@ import { signToken } from '../utils/jwt';
 import { EstadoMiembro } from '@prisma/client';
 import { env } from '../config/env';
 import { authenticate } from '../middlewares/auth';
+import { obtenerEstadoVotos } from '../services/votosService';
 
 const router = Router();
 
@@ -98,6 +99,16 @@ router.get(
 );
 
 // Devuelve el perfil completo del usuario autenticado usando el JWT
+// Endpoint para obtener solo el estado de votos (más ligero)
+router.get('/votos', authenticate, async (req, res, next) => {
+  try {
+    const estadoVotos = await obtenerEstadoVotos(req.user!.id);
+    res.json(estadoVotos);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/me', authenticate, async (req, res, next) => {
   try {
     const user = await prisma.usuario.findUnique({ where: { id: req.user!.id } });
@@ -114,10 +125,13 @@ router.get('/me', authenticate, async (req, res, next) => {
       })
     ]);
 
+    const estadoVotos = await obtenerEstadoVotos(user.id);
+
     const perfilExtendido = {
       ...user,
       validadores: validacionesRecibidas.map(v => v.miembroVotante),
-      validados: validacionesOtorgadas.map(v => v.solicitud!.usuario)
+      validados: validacionesOtorgadas.map(v => v.solicitud!.usuario),
+      estadoVotos
     };
 
     res.json(perfilExtendido);

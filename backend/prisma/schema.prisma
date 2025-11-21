@@ -46,26 +46,28 @@ enum TipoReaccionVoto {
 }
 
 model Usuario {
-  id               String                 @id @default(cuid())
-  displayName      String
-  email            String                 @unique
-  passwordHash     String?                @map("password_hash")
-  avatarUrl        String?
-  genero           String?
-  fechaNacimiento  DateTime?
-  edad             Int?
-  estadoMiembro    EstadoMiembro          @default(pendiente_aprobacion)
-  rol              RolUsuario             @default(miembro)
-  bio              String?
-  createdAt        DateTime               @default(now())
-  updatedAt        DateTime               @updatedAt
-  solicitudes      SolicitudMiembro[]
-  peticiones       Peticion[]             @relation("PeticionAutor")
-  votosPeticiones  PeticionVoto[]
-  votosSolicitudes SolicitudVoto[]
-  likes            PeticionLike[]
-  reportes         Reporte[]              @relation("ReporteAutor")
-  reaccionesVotos  PeticionVotoReaction[]
+  id                    String                 @id @default(cuid())
+  displayName           String
+  email                 String                 @unique
+  passwordHash          String?                @map("password_hash")
+  avatarUrl             String?
+  genero                String?
+  fechaNacimiento       DateTime?
+  edad                  Int?
+  estadoMiembro         EstadoMiembro          @default(pendiente_aprobacion)
+  rol                   RolUsuario             @default(miembro)
+  bio                   String?
+  votosDisponibles      Int                    @default(10)
+  ultimaRegeneracionVoto DateTime              @default(now())
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  solicitudes           SolicitudMiembro[]
+  peticiones            Peticion[]             @relation("PeticionAutor")
+  votosPeticiones       PeticionVoto[]
+  votosSolicitudes      SolicitudVoto[]
+  likes                 PeticionLike[]
+  reportes              Reporte[]              @relation("ReporteAutor")
+  reaccionesVotos       PeticionVotoReaction[]
 }
 
 model SolicitudMiembro {
@@ -161,6 +163,8 @@ model Configuracion {
   minVotosSolicitud    Int      @default(10)
   minVotosPeticion     Int      @default(100)
   porcentajeAprobacion Int      @default(70)
+  maxVotosDisponibles   Int      @default(10)
+  minutosRegeneracionVoto Int   @default(2)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

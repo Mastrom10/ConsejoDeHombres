@@ -6,6 +6,7 @@ import { evaluatePeticion } from '../services/rulesService';
 import { EstadoPeticion } from '@prisma/client';
 import { uploadImages } from '../middlewares/upload';
 import { uploadMultipleImagesToS3 } from '../services/s3Service';
+import { consumirVoto } from '../services/votosService';
 
 const router = Router();
 
@@ -227,6 +228,15 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
         }
       }
     });
+
+    // Solo consumir voto si es un voto nuevo (no "debatir") y no existe voto previo
+    const esVotoNuevo = !votoExistente && parsed.tipoVoto !== 'debatir';
+    if (esVotoNuevo) {
+      const tieneVoto = await consumirVoto(req.user!.id);
+      if (!tieneVoto) {
+        return res.status(429).json({ message: 'No tienes votos disponibles. Espera a que se regeneren.' });
+      }
+    }
 
     let votoAnterior: 'aprobar' | 'rechazar' | 'debatir' | null = null;
     if (votoExistente) {

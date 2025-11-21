@@ -10,7 +10,10 @@ async function main() {
 
   await prisma.configuracion.upsert({
     where: { id: 1 },
-    create: {},
+    create: {
+      maxVotosDisponibles: 10,
+      minutosRegeneracionVoto: 2
+    },
     update: {}
   });
 

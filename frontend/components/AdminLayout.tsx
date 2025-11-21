@@ -20,7 +20,8 @@ const links = [
   { href: '/admin', label: 'Dashboard' },
   { href: '/admin/usuarios', label: 'Usuarios' },
   { href: '/admin/peticiones', label: 'Peticiones' },
-  { href: '/admin/solicitudes', label: 'Solicitudes' }
+  { href: '/admin/solicitudes', label: 'Solicitudes' },
+  { href: '/admin/config', label: 'Configuración' }
 ];
 
 export default function AdminLayout({ title, description, children }: Props) {
