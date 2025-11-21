@@ -80,7 +80,7 @@ export default function RegistroSolicitud() {
           setSolicitudId(solicitud.id);
           
           // Extraer solo los nombres de usuario de las URLs de redes sociales
-          let redesParsed: Record<string, string> = {
+          let redesParsed: { instagram: string; twitter: string; linkedin: string; facebook: string; otro: string } = {
             instagram: '',
             twitter: '',
             linkedin: '',
