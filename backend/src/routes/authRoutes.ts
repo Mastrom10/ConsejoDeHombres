@@ -8,6 +8,7 @@ import { EstadoMiembro } from '@prisma/client';
 import { env } from '../config/env';
 import { authenticate } from '../middlewares/auth';
 import { obtenerEstadoVotos } from '../services/votosService';
+import { requiredValidationsByUserCount } from '../services/rulesService';
 
 const router = Router();
 
@@ -131,6 +132,42 @@ router.get('/me', authenticate, async (req, res, next) => {
     };
 
     res.json(perfilExtendido);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/stats', authenticate, async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    
+    const [peticionesCreadas, votosEmitidos, solicitud] = await Promise.all([
+      prisma.peticion.count({ where: { autorId: userId } }),
+      prisma.peticionVoto.count({ where: { miembroVotanteId: userId } }),
+      prisma.solicitudMiembro.findFirst({ 
+        where: { usuarioId: userId },
+        select: { totalAprobaciones: true, estadoSolicitud: true }
+      })
+    ]);
+
+    // Calcular votos necesarios para la solicitud
+    let votosNecesarios = 0;
+    let votosActuales = 0;
+    if (solicitud && solicitud.estadoSolicitud === 'pendiente') {
+      const totalUsuarios = await prisma.usuario.count();
+      votosNecesarios = requiredValidationsByUserCount(totalUsuarios);
+      votosActuales = solicitud.totalAprobaciones;
+    }
+
+    res.json({
+      peticionesCreadas,
+      votosEmitidos,
+      solicitud: solicitud ? {
+        votosActuales,
+        votosNecesarios,
+        estadoSolicitud: solicitud.estadoSolicitud
+      } : null
+    });
   } catch (e) {
     next(e);
   }

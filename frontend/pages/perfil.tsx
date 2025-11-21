@@ -17,20 +17,56 @@ type User = {
   votosRecibidos?: number; 
 };
 
+type UserStats = {
+  peticionesCreadas: number;
+  votosEmitidos: number;
+  solicitud: {
+    votosActuales: number;
+    votosNecesarios: number;
+    estadoSolicitud: string;
+  } | null;
+};
+
 export default function Perfil() {
   const [user, setUser] = useState<User | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
   const router = useRouter();
-  
-  // Simulación de votos para el ejemplo (el backend debería enviarlo en 'solicitudes')
-  // En un caso real, haríamos un fetch a /solicitudes/me
-  const votosNecesarios = 10;
-  const votosActuales = 3; // Hardcodeado para efecto visual "absurdo"
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
     if (userStr) {
       setUser(JSON.parse(userStr));
     }
+  }, []);
+
+  useEffect(() => {
+    const cargarStats = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoadingStats(false);
+        return;
+      }
+
+      try {
+        const res = await axios.get(`${API}/auth/stats`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setStats(res.data);
+      } catch (error) {
+        console.error('Error al cargar estadísticas:', error);
+        // Valores por defecto si falla
+        setStats({
+          peticionesCreadas: 0,
+          votosEmitidos: 0,
+          solicitud: null
+        });
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    cargarStats();
   }, []);
 
   const getRoleLabel = (role: string, status: string) => {
@@ -129,28 +165,34 @@ export default function Perfil() {
               </div>
 
               {/* Panel de Estado del Aspirante */}
-              {user.estadoMiembro === 'pendiente_aprobacion' && (
+              {user.estadoMiembro === 'pendiente_aprobacion' && stats?.solicitud && (
                   <div className="mt-6 bg-slate-900 border border-dashed border-amber-700/50 p-4 rounded">
                       <h3 className="text-amber-500 text-xs font-bold uppercase tracking-widest mb-3">Progreso de Aprobación</h3>
-                      <div className="w-full bg-slate-800 h-4 rounded-full overflow-hidden border border-slate-700 mb-2">
-                          <div 
-                            className="bg-amber-600 h-full relative stripe-pattern" 
-                            style={{ width: `${(votosActuales / votosNecesarios) * 100}%` }}
-                          ></div>
-                      </div>
-                      <div className="flex justify-between text-xs text-slate-400 font-mono">
-                          <span>{votosActuales} Votos a favor</span>
-                          <span>Objetivo: {votosNecesarios}</span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 mt-3 italic text-center mb-3">
-                          "La paciencia es la primera virtud del caballero."
-                      </p>
-                      <Link
-                        href="/registro-solicitud"
-                        className="block w-full text-center btn btn-secondary text-xs py-2"
-                      >
-                        ✏️ Modificar mi Solicitud
-                      </Link>
+                      {loadingStats ? (
+                        <div className="text-center py-4 text-slate-400 text-xs">Cargando...</div>
+                      ) : (
+                        <>
+                          <div className="w-full bg-slate-800 h-4 rounded-full overflow-hidden border border-slate-700 mb-2">
+                              <div 
+                                className="bg-amber-600 h-full relative stripe-pattern" 
+                                style={{ width: `${stats.solicitud.votosNecesarios > 0 ? Math.min((stats.solicitud.votosActuales / stats.solicitud.votosNecesarios) * 100, 100) : 0}%` }}
+                              ></div>
+                          </div>
+                          <div className="flex justify-between text-xs text-slate-400 font-mono">
+                              <span>{stats.solicitud.votosActuales} Votos a favor</span>
+                              <span>Objetivo: {stats.solicitud.votosNecesarios}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 mt-3 italic text-center mb-3">
+                              "La paciencia es la primera virtud del caballero."
+                          </p>
+                          <Link
+                            href="/registro-solicitud"
+                            className="block w-full text-center btn btn-secondary text-xs py-2"
+                          >
+                            ✏️ Modificar mi Solicitud
+                          </Link>
+                        </>
+                      )}
                   </div>
               )}
             </div>
@@ -192,22 +234,30 @@ export default function Perfil() {
               <div className="card opacity-70 grayscale transition-all hover:grayscale-0 hover:opacity-100">
                  <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-black uppercase tracking-widest text-slate-100">Hoja de Servicios</h3>
-                    <span className="text-xs text-amber-500 font-mono border border-amber-500/30 px-2 py-0.5 rounded">EN DESARROLLO</span>
+                    {loadingStats && (
+                      <span className="text-xs text-amber-500 font-mono border border-amber-500/30 px-2 py-0.5 rounded">CARGANDO...</span>
+                    )}
                  </div>
-                 <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="bg-slate-800/50 p-3 rounded">
-                        <div className="text-2xl font-black text-white">0</div>
-                        <div className="text-[10px] uppercase tracking-widest text-slate-500">Mociones</div>
-                    </div>
-                    <div className="bg-slate-800/50 p-3 rounded">
-                        <div className="text-2xl font-black text-white">0</div>
-                        <div className="text-[10px] uppercase tracking-widest text-slate-500">Votos Emitidos</div>
-                    </div>
-                    <div className="bg-slate-800/50 p-3 rounded">
-                        <div className="text-2xl font-black text-white">0</div>
-                        <div className="text-[10px] uppercase tracking-widest text-slate-500">Honor</div>
-                    </div>
-                 </div>
+                 {loadingStats ? (
+                   <div className="text-center py-8 text-slate-400 text-sm">Cargando estadísticas...</div>
+                 ) : (
+                   <div className="grid grid-cols-3 gap-4 text-center">
+                      <div className="bg-slate-800/50 p-3 rounded">
+                          <div className="text-2xl font-black text-white">{stats?.peticionesCreadas || 0}</div>
+                          <div className="text-[10px] uppercase tracking-widest text-slate-500">Mociones</div>
+                      </div>
+                      <div className="bg-slate-800/50 p-3 rounded">
+                          <div className="text-2xl font-black text-white">{stats?.votosEmitidos || 0}</div>
+                          <div className="text-[10px] uppercase tracking-widest text-slate-500">Votos Emitidos</div>
+                      </div>
+                      <div className="bg-slate-800/50 p-3 rounded">
+                          <div className="text-2xl font-black text-white">
+                            {stats ? (stats.peticionesCreadas * 2 + stats.votosEmitidos) : 0}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-widest text-slate-500">Honor</div>
+                      </div>
+                   </div>
+                 )}
               </div>
 
               {/* Zona de Autodestrucción */}

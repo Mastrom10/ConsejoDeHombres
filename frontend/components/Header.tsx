@@ -161,7 +161,6 @@ export default function Header() {
                   )}
                 </div>
               )}
-              <Link href="/perfil" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Expediente</Link>
             </>
           ) : (
             <Link href="/login" className="btn btn-primary py-2 px-4 text-xs shadow-[0_0_15px_rgba(56,189,248,0.3)]">
