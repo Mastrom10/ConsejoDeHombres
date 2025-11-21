@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 type User = {
   estadoMiembro: string;
+  rol?: string;
 };
 
 export default function Header() {
@@ -29,6 +30,7 @@ export default function Header() {
   };
 
   const isApproved = user?.estadoMiembro === 'miembro_aprobado';
+  const isAdmin = user?.rol === 'admin';
 
   return (
     <header className="bg-surface/90 backdrop-blur-md border-b border-slate-700 sticky top-0 z-50 shadow-lg">
@@ -39,12 +41,17 @@ export default function Header() {
              El Consejo de Hombres
            </span>
         </Link>
-        
+
         <nav className="hidden md:flex items-center gap-6 text-xs font-bold tracking-widest uppercase text-slate-400">
           {isLoggedIn && (
             <>
               <Link href="/" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Peticiones</Link>
               <Link href="/solicitudes" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Solicitudes</Link>
+              {isAdmin && (
+                <Link href="/admin" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">
+                  Admin
+                </Link>
+              )}
             </>
           )}
           {isLoggedIn ? (
@@ -74,6 +81,14 @@ export default function Header() {
         <div className="flex md:hidden items-center gap-2">
           {isLoggedIn ? (
             <>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="text-[10px] font-bold uppercase tracking-widest text-primary border border-primary/40 px-2 py-1 rounded"
+                >
+                  Admin
+                </Link>
+              )}
               {isApproved && (
                 <Link
                   href="/crear-peticion"

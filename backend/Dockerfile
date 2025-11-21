@@ -22,4 +22,4 @@ ENV PORT=4000
 EXPOSE 4000
 # Usamos npx prisma migrate deploy para asegurar que la DB tenga las tablas
 # y luego iniciamos la app
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node dist/index.js"]
