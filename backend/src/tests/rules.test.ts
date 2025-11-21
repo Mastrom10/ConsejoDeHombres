@@ -7,7 +7,9 @@ const config: Configuracion = {
   updatedAt: new Date(),
   minVotosPeticion: 5,
   minVotosSolicitud: 3,
-  porcentajeAprobacion: 70
+  porcentajeAprobacion: 70,
+  maxVotosDisponibles: 10,
+  minutosRegeneracionVoto: 2
 };
 
 describe('Reglas de solicitudes', () => {
