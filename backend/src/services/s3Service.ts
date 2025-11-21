@@ -21,8 +21,9 @@ export async function uploadImageToS3(
     Bucket: env.awsBucketName,
     Key: fileName,
     Body: file.buffer,
-    ContentType: file.mimetype,
-    ACL: 'public-read'
+    ContentType: file.mimetype
+    // Nota: El bucket debe tener una política pública configurada para permitir lectura pública
+    // No usamos ACL porque muchos buckets modernos tienen ACLs bloqueados
   });
 
   await s3Client.send(command);

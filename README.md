@@ -80,7 +80,22 @@ frontend/
   - `AWS_ACCESS_KEY_ID`: tu access key de AWS
   - `AWS_SECRET_ACCESS_KEY`: tu secret key de AWS
   - `AWS_S3_BUCKET_NAME`: nombre de tu bucket S3
-- El bucket debe tener permisos públicos de lectura para que las imágenes sean accesibles.
+- **Configuración del bucket**: El bucket debe tener una política pública configurada para permitir lectura pública. Ejemplo de política:
+  ```json
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "PublicReadGetObject",
+        "Effect": "Allow",
+        "Principal": "*",
+        "Action": "s3:GetObject",
+        "Resource": "arn:aws:s3:::tu-bucket-name/*"
+      }
+    ]
+  }
+  ```
+  Nota: Muchos buckets modernos tienen ACLs bloqueados, por lo que se usa política de bucket en lugar de ACLs.
 - Límites: máximo 5 imágenes por petición, 5MB por imagen. Formatos permitidos: JPEG, PNG, GIF, WEBP.
 
 ## 🧭 Roadmap sugerido
