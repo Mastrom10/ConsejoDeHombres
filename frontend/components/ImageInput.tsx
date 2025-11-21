@@ -82,7 +82,30 @@ export default function ImageInput({
         captureButton.textContent = 'Capturar';
         captureButton.className = 'btn btn-primary px-6 py-3 text-lg';
         captureButton.onclick = () => {
-          ctx?.drawImage(previewVideo, 0, 0);
+          if (!ctx) return;
+          
+          // Obtener dimensiones del video
+          const videoWidth = previewVideo.videoWidth;
+          const videoHeight = previewVideo.videoHeight;
+          
+          // Calcular el tamaño cuadrado (usar el lado más corto)
+          const size = Math.min(videoWidth, videoHeight);
+          
+          // Calcular el offset para centrar el recorte
+          const offsetX = (videoWidth - size) / 2;
+          const offsetY = (videoHeight - size) / 2;
+          
+          // Configurar el canvas como cuadrado
+          canvas.width = size;
+          canvas.height = size;
+          
+          // Dibujar la imagen recortada y centrada
+          ctx.drawImage(
+            previewVideo,
+            offsetX, offsetY, size, size, // Recorte del video (source)
+            0, 0, size, size // Dibujo en el canvas (destination)
+          );
+          
           stream.getTracks().forEach(track => track.stop());
           
           canvas.toBlob((blob) => {
