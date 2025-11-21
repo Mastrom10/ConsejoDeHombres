@@ -4,6 +4,8 @@ import { prisma } from '../config/prisma';
 import { createPeticionSchema, votoPeticionSchema } from '../dtos/peticionDtos';
 import { evaluatePeticion } from '../services/rulesService';
 import { EstadoPeticion } from '@prisma/client';
+import { uploadImages } from '../middlewares/upload';
+import { uploadMultipleImagesToS3 } from '../services/s3Service';
 
 const router = Router();
 
@@ -113,6 +115,26 @@ router.post('/:peticionId/votos/:votoId/reaccion', authenticate, requireMember, 
     const myReaction = updated?.reacciones.find((r) => r.usuarioId === req.user!.id)?.tipo ?? null;
 
     res.json({ upCount, downCount, myReaction });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Endpoint para subir imágenes a S3
+router.post('/upload', authenticate, requireMember, uploadImages.array('imagenes', 5), async (req, res, next) => {
+  try {
+    if (!req.files || (Array.isArray(req.files) && req.files.length === 0)) {
+      return res.status(400).json({ message: 'No se proporcionaron imágenes' });
+    }
+
+    const files = Array.isArray(req.files) ? req.files : [req.files];
+    
+    if (files.length > 5) {
+      return res.status(400).json({ message: 'Máximo 5 imágenes permitidas' });
+    }
+
+    const imageUrls = await uploadMultipleImagesToS3(files as Express.Multer.File[]);
+    res.json({ urls: imageUrls });
   } catch (e) {
     next(e);
   }

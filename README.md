@@ -18,7 +18,7 @@ Aplicación web responsive (backend + frontend) para que los hombres soliciten i
 ## 🔌 Endpoints principales
 - **Auth** `/auth/register` (POST), `/auth/login` (POST), `/auth/google` (GET), `/auth/google/callback` (GET), `/auth/me` (GET), `/auth/me` (DELETE). Respuesta: token JWT + perfil.
 - **Solicitudes** `/solicitudes` (GET, POST), `/solicitudes/:id/votar` (POST). Reglas: solo miembros aprobados votan; rechazos requieren mensaje.
-- **Peticiones** `/peticiones` (GET, filtro por estado), `/peticiones/populares` (GET), `/peticiones` (POST), `/peticiones/:id/votar` (POST), `/peticiones/:id/like` (POST), `/peticiones/:peticionId/votos/:votoId/reaccion` (POST).
+- **Peticiones** `/peticiones` (GET, filtro por estado), `/peticiones/populares` (GET), `/peticiones` (POST), `/peticiones/upload` (POST, subir imágenes a S3), `/peticiones/:id/votar` (POST), `/peticiones/:id/like` (POST), `/peticiones/:peticionId/votos/:votoId/reaccion` (POST).
 - **Admin** `/admin/dashboard` (GET métricas), `/admin/config` (GET/PUT), `/admin/usuarios` (GET/POST), `/admin/usuarios/:id` (GET/PUT/DELETE), `/admin/peticiones` (GET), `/admin/peticiones/:id` (PUT/DELETE), `/admin/solicitudes` (GET), `/admin/solicitudes/:id` (PUT/DELETE), `/admin/reportes` (GET/POST), `/admin/reportes/:id` (PUT/DELETE). Solo rol `admin`.
 
 ## ✅ Regla de aprobación
@@ -41,7 +41,10 @@ frontend/
 ```
 
 ## 🚀 Puesta en marcha
-1. **Variables**: copia `.env.example` → `.env` y ajusta credenciales (Google OAuth, JWT, admin inicial). Por defecto se crea `admin@elconsejodehombres.net` con contraseña `Merluza23!`.
+1. **Variables**: copia `.env.example` → `.env` en `backend/` y `frontend/` y ajusta credenciales:
+   - **Backend**: Google OAuth, JWT, admin inicial, PostgreSQL, AWS S3 (para almacenamiento de imágenes).
+   - **Frontend**: URL del backend API.
+   - Por defecto se crea `admin@elconsejodehombres.net` con contraseña `Merluza23!`.
 2. **Docker compose** (recomendado):
    ```bash
    docker-compose up --build
@@ -70,7 +73,16 @@ frontend/
 - Validaciones con Zod para entradas críticas, mensajes obligatorios en rechazos.
 - Separación por capas (rutas → servicios → Prisma) y DTOs.
 
+## 📸 Almacenamiento de imágenes (AWS S3)
+- Las imágenes de las peticiones se almacenan en AWS S3.
+- Configura las variables de entorno de AWS en el backend:
+  - `AWS_REGION`: región de tu bucket (ej: `us-east-1`)
+  - `AWS_ACCESS_KEY_ID`: tu access key de AWS
+  - `AWS_SECRET_ACCESS_KEY`: tu secret key de AWS
+  - `AWS_S3_BUCKET_NAME`: nombre de tu bucket S3
+- El bucket debe tener permisos públicos de lectura para que las imágenes sean accesibles.
+- Límites: máximo 5 imágenes por petición, 5MB por imagen. Formatos permitidos: JPEG, PNG, GIF, WEBP.
+
 ## 🧭 Roadmap sugerido
-- Integrar almacenamiento S3 para imágenes/videos.
 - Mejorar UX (estado global de sesión, toasts, skeleton loaders).
 - Documentar API con Swagger/OpenAPI.

@@ -15,6 +15,7 @@ import { EstadoMiembro, RolUsuario } from '@prisma/client';
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = [
   env.frontendUrl,
