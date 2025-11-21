@@ -16,6 +16,7 @@ export type PeticionDto = {
   autor: { displayName: string; avatarUrl?: string };
   autorId?: string;
   createdAt?: string;
+  miVoto?: 'aprobar' | 'rechazar' | 'debatir' | null;
 };
 
 export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
@@ -144,16 +145,20 @@ export default function PeticionCard({ peticion }: { peticion: PeticionDto }) {
           <button
             onClick={(e) => handleVotar('aprobar', e)}
             disabled={votando}
-            className="flex-1 btn btn-primary text-sm py-2 disabled:opacity-50"
+            className={`flex-1 btn text-sm py-2 disabled:opacity-50 ${
+              peticion.miVoto === 'aprobar' ? 'btn-primary' : 'btn-secondary'
+            }`}
           >
-            👍 Aprobar
+            👍 {peticion.miVoto === 'aprobar' ? 'Aprobado' : 'Aprobar'}
           </button>
           <button
             onClick={(e) => handleVotar('rechazar', e)}
             disabled={votando}
-            className="flex-1 btn btn-secondary text-sm py-2 disabled:opacity-50"
+            className={`flex-1 btn text-sm py-2 disabled:opacity-50 ${
+              peticion.miVoto === 'rechazar' ? 'btn-primary' : 'btn-secondary'
+            }`}
           >
-            👎 Rechazar
+            👎 {peticion.miVoto === 'rechazar' ? 'Rechazado' : 'Rechazar'}
           </button>
         </div>
       )}

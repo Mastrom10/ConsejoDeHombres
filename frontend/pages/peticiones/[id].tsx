@@ -27,7 +27,7 @@ export default function PeticionDetalle() {
   const [peticion, setPeticion] = useState<any>(null);
   const [votos, setVotos] = useState<VotoConAutor[]>([]);
   const [mensaje, setMensaje] = useState('');
-  const [voto, setVoto] = useState<'aprobar' | 'rechazar' | 'debatir'>('aprobar');
+  const [voto, setVoto] = useState<'aprobar' | 'rechazar' | 'debatir' | null>(null);
   const [comentario, setComentario] = useState('');
   const [miVotoActual, setMiVotoActual] = useState<'aprobar' | 'rechazar' | 'debatir' | null>(null);
   const [reportando, setReportando] = useState(false);
@@ -43,9 +43,11 @@ export default function PeticionDetalle() {
     setIsLoggedIn(!!token);
 
     const userStr = localStorage.getItem('user');
+    let parsedUser: User | null = null;
     if (userStr) {
       try {
-        setUser(JSON.parse(userStr));
+        parsedUser = JSON.parse(userStr);
+        setUser(parsedUser);
       } catch {
         setUser(null);
       }
@@ -60,14 +62,20 @@ export default function PeticionDetalle() {
       .then((res) => {
         setPeticion(res.data);
         setVotos(res.data.votos || []);
-        // Buscar si el usuario ya votó
-        if (user) {
-          const miVoto = res.data.votos?.find((v: VotoConAutor) => v.miembroVotante.id === user.id);
-          if (miVoto) {
-            setMiVotoActual(miVoto.tipoVoto);
-            setVoto(miVoto.tipoVoto);
-            setComentario(miVoto.mensaje || '');
-          }
+        // Usar miVoto del backend si existe
+        if (res.data.miVoto) {
+          setMiVotoActual(res.data.miVoto);
+          setVoto(res.data.miVoto);
+          // Buscar el mensaje en los votos si existe
+          const miVotoCompleto = res.data.votos?.find((v: VotoConAutor) => 
+            v.miembroVotante.id === parsedUser?.id && v.tipoVoto === res.data.miVoto
+          );
+          setComentario(miVotoCompleto?.mensaje || '');
+        } else {
+          // Si no hay voto, asegurarse de que no haya nada preseleccionado
+          setMiVotoActual(null);
+          setVoto(null);
+          setComentario('');
         }
       })
       .catch(() => setMensaje('No se pudo cargar la petición.'));
@@ -149,6 +157,35 @@ export default function PeticionDetalle() {
 
   const porcentaje = Math.round((peticion.totalAprobaciones / Math.max(1, peticion.totalAprobaciones + peticion.totalRechazos)) * 100);
 
+  // Función para convertir URLs de YouTube/Vimeo a formato embed
+  const getVideoEmbedUrl = (url: string): { embedUrl: string; type: 'youtube' | 'vimeo' | 'other' } | null => {
+    if (!url) return null;
+
+    // YouTube: varios formatos posibles
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch) {
+      return {
+        embedUrl: `https://www.youtube.com/embed/${youtubeMatch[1]}`,
+        type: 'youtube'
+      };
+    }
+
+    // Vimeo
+    const vimeoRegex = /(?:vimeo\.com\/)(?:.*\/)?(\d+)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch) {
+      return {
+        embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}`,
+        type: 'vimeo'
+      };
+    }
+
+    return null;
+  };
+
+  const videoEmbed = peticion.videoUrl ? getVideoEmbedUrl(peticion.videoUrl) : null;
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -183,11 +220,24 @@ export default function PeticionDetalle() {
 
           {peticion.videoUrl && (
             <div className="mt-4">
-              <video
-                src={peticion.videoUrl}
-                controls
-                className="w-full rounded-xl border border-slate-700"
-              />
+              {videoEmbed ? (
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  <iframe
+                    src={videoEmbed.embedUrl}
+                    className="absolute top-0 left-0 w-full h-full rounded-xl border border-slate-700"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title="Video embebido"
+                  />
+                </div>
+              ) : (
+                <video
+                  src={peticion.videoUrl}
+                  controls
+                  className="w-full rounded-xl border border-slate-700"
+                />
+              )}
             </div>
           )}
 
@@ -210,14 +260,14 @@ export default function PeticionDetalle() {
                   onClick={() => canVote && setVoto('aprobar')}
                   disabled={!canVote}
                 >
-                  👍 Aprobar
+                  👍 {miVotoActual === 'aprobar' ? 'Aprobado' : 'Aprobar'}
                 </button>
                 <button
                   className={`btn ${voto === 'rechazar' ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => canVote && setVoto('rechazar')}
                   disabled={!canVote}
                 >
-                  👎 Rechazar
+                  👎 {miVotoActual === 'rechazar' ? 'Rechazado' : 'Rechazar'}
                 </button>
                 <button
                   className={`btn ${voto === 'debatir' ? 'btn-primary' : 'btn-secondary'}`}
@@ -248,7 +298,7 @@ export default function PeticionDetalle() {
               <button
                 className="btn btn-primary w-full md:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
                 onClick={votar}
-                disabled={!canVote || (voto !== 'aprobar' && (!comentario || comentario.length < 4))}
+                disabled={!canVote || !voto || (voto !== 'aprobar' && (!comentario || comentario.length < 4))}
               >
                 {miVotoActual ? 'Actualizar ' : 'Enviar '}{voto === 'debatir' ? 'comentario' : 'voto'}
               </button>

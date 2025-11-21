@@ -17,6 +17,21 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
   }
 }
 
+export function optionalAuthenticate(req: Request, _res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (authHeader) {
+    const [, token] = authHeader.split(' ');
+    try {
+      const payload = jwt.verify(token, env.jwtSecret) as Express.User;
+      req.user = payload;
+    } catch (e) {
+      // Si el token es inválido, simplemente no establecemos req.user
+      req.user = undefined;
+    }
+  }
+  next();
+}
+
 export function requireMember(req: Request, res: Response, next: NextFunction) {
   if (!req.user) return res.status(401).json({ message: 'No autenticado' });
   if (req.user.estadoMiembro !== EstadoMiembro.miembro_aprobado) {

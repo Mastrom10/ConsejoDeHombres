@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireMember } from '../middlewares/auth';
+import { authenticate, requireMember, optionalAuthenticate } from '../middlewares/auth';
 import { prisma } from '../config/prisma';
 import { createPeticionSchema, votoPeticionSchema } from '../dtos/peticionDtos';
 import { evaluatePeticion } from '../services/rulesService';
@@ -10,32 +10,74 @@ import { consumirVoto } from '../services/votosService';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', optionalAuthenticate, async (req, res) => {
   const filter = req.query.estado as EstadoPeticion | undefined;
+  const userId = (req as any).user?.id; // Obtener userId si está autenticado
+  
   const peticiones = await prisma.peticion.findMany({
     where: {
       ...(filter ? { estadoPeticion: filter } : {}),
       oculta: false // Filtramos las ocultas por defecto
     },
-    include: { autor: true },
+    include: { 
+      autor: true,
+      ...(userId ? {
+        votos: {
+          where: { miembroVotanteId: userId },
+          select: { tipoVoto: true }
+        }
+      } : {})
+    },
     orderBy: { createdAt: 'desc' }
   });
-  res.json(peticiones);
+  
+  // Transformar para incluir miVoto si existe
+  const peticionesConVoto = peticiones.map(p => {
+    const { votos, ...rest } = p as any;
+    return {
+      ...rest,
+      miVoto: votos && votos.length > 0 ? votos[0].tipoVoto : null
+    };
+  });
+  
+  res.json(peticionesConVoto);
 });
 
-router.get('/populares', async (_req, res) => {
+router.get('/populares', optionalAuthenticate, async (req, res) => {
+  const userId = (req as any).user?.id; // Obtener userId si está autenticado
+  
   const peticiones = await prisma.peticion.findMany({
     where: { oculta: false },
     take: 20,
     orderBy: [{ likes: 'desc' }, { createdAt: 'desc' }],
-    include: { autor: true }
+    include: { 
+      autor: true,
+      ...(userId ? {
+        votos: {
+          where: { miembroVotanteId: userId },
+          select: { tipoVoto: true }
+        }
+      } : {})
+    }
   });
-  res.json(peticiones);
+  
+  // Transformar para incluir miVoto si existe
+  const peticionesConVoto = peticiones.map(p => {
+    const { votos, ...rest } = p as any;
+    return {
+      ...rest,
+      miVoto: votos && votos.length > 0 ? votos[0].tipoVoto : null
+    };
+  });
+  
+  res.json(peticionesConVoto);
 });
 
 // Detalle de una petición con historial de votos
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', optionalAuthenticate, async (req, res, next) => {
   try {
+    const userId = (req as any).user?.id;
+    
     const peticion = await prisma.peticion.findUnique({
       where: { id: req.params.id },
       include: {
@@ -54,6 +96,15 @@ router.get('/:id', async (req, res, next) => {
       return res.status(404).json({ message: 'Petición no encontrada' });
     }
 
+    // Obtener el voto del usuario actual si está autenticado
+    let miVoto: 'aprobar' | 'rechazar' | 'debatir' | null = null;
+    if (userId) {
+      const miVotoEncontrado = peticion.votos.find(v => v.miembroVotanteId === userId);
+      if (miVotoEncontrado) {
+        miVoto = miVotoEncontrado.tipoVoto as 'aprobar' | 'rechazar' | 'debatir';
+      }
+    }
+
     const votosConReacciones = peticion.votos.map((v) => {
       const upCount = v.reacciones.filter((r) => r.tipo === 'up').length;
       const downCount = v.reacciones.filter((r) => r.tipo === 'down').length;
@@ -61,7 +112,7 @@ router.get('/:id', async (req, res, next) => {
       return { ...rest, upCount, downCount, myReaction: null };
     });
 
-    res.json({ ...peticion, votos: votosConReacciones });
+    res.json({ ...peticion, votos: votosConReacciones, miVoto });
   } catch (e) {
     next(e);
   }

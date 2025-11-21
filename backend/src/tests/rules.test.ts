@@ -25,13 +25,14 @@ describe('Reglas de solicitudes', () => {
 });
 
 describe('Regla dinámica de validaciones por cantidad de usuarios', () => {
-  it('no requiere validaciones para los primeros 100 usuarios', () => {
-    expect(requiredValidationsByUserCount(50)).toBe(0);
-    expect(requiredValidationsByUserCount(100)).toBe(0);
-  });
-  it('requiere 1 validación entre 101 y 1000 usuarios', () => {
-    expect(requiredValidationsByUserCount(101)).toBe(1);
+  it('requiere 1 validación hasta 1000 usuarios', () => {
+    expect(requiredValidationsByUserCount(50)).toBe(1);
+    expect(requiredValidationsByUserCount(100)).toBe(1);
     expect(requiredValidationsByUserCount(1000)).toBe(1);
+  });
+  it('requiere 2 validaciones entre 1001 y 3000 usuarios', () => {
+    expect(requiredValidationsByUserCount(1001)).toBe(2);
+    expect(requiredValidationsByUserCount(3000)).toBe(2);
   });
   it('requiere 10 validaciones para más de 10000 usuarios', () => {
     expect(requiredValidationsByUserCount(15000)).toBe(10);

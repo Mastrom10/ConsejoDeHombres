@@ -64,14 +64,12 @@ passport.use(
         const existing = await prisma.usuario.findUnique({ where: { email } });
         let user = existing;
         if (!user) {
-          const totalUsuarios = await prisma.usuario.count();
-          const esPrimerosCien = totalUsuarios < 100;
           user = await prisma.usuario.create({
             data: {
               email,
               displayName,
               avatarUrl: avatar,
-              estadoMiembro: esPrimerosCien ? EstadoMiembro.miembro_aprobado : EstadoMiembro.pendiente_aprobacion
+              estadoMiembro: EstadoMiembro.pendiente_aprobacion
             }
           });
         } else {

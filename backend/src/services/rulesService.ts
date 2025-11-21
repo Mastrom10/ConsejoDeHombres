@@ -5,7 +5,6 @@ import { Configuracion, TipoVoto } from '@prisma/client';
  * según la cantidad total de usuarios del sistema.
  */
 export function requiredValidationsByUserCount(totalUsuarios: number): number {
-  if (totalUsuarios <= 100) return 0; // primeros 100 no requieren validación
   if (totalUsuarios <= 1000) return 1;
   if (totalUsuarios <= 3000) return 2;
   if (totalUsuarios <= 5000) return 3;

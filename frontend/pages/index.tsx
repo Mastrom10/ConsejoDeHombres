@@ -21,8 +21,12 @@ export default function Home() {
     const userStr = localStorage.getItem('user');
     if (userStr) setUser(JSON.parse(userStr));
 
+    const config = token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : undefined;
+
     axios
-      .get(`${process.env.NEXT_PUBLIC_API_URL}/peticiones`)
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/peticiones`, config)
       .then(res => setPeticiones(res.data))
       .catch(() => setPeticiones([]))
       .finally(() => setLoading(false));

@@ -16,10 +16,6 @@ router.post('/register', async (req, res, next) => {
     const parsed = registerSchema.parse(req.body);
     const hash = await bcrypt.hash(parsed.password, 10);
 
-    // Contar usuarios existentes para aplicar reglas de auto-aprobación
-    const totalUsuarios = await prisma.usuario.count();
-    const esPrimerosCien = totalUsuarios < 100;
-
     const user = await prisma.usuario.create({
       data: {
         email: parsed.email,
@@ -28,7 +24,7 @@ router.post('/register', async (req, res, next) => {
         genero: parsed.genero,
         edad: parsed.edad,
         avatarUrl: parsed.avatarUrl,
-        estadoMiembro: esPrimerosCien ? EstadoMiembro.miembro_aprobado : EstadoMiembro.pendiente_aprobacion
+        estadoMiembro: EstadoMiembro.pendiente_aprobacion
       }
     });
     // Cargar info de validaciones para el perfil
