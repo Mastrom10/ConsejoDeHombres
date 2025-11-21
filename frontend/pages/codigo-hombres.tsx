@@ -1,8 +1,16 @@
+import { useEffect, useState } from 'react';
 import Header from '../components/Header';
 import SEO from '../components/SEO';
 import Link from 'next/link';
 
 export default function CodigoHombres() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+  }, []);
+
   return (
     <>
       <SEO
@@ -329,9 +337,11 @@ export default function CodigoHombres() {
           </section>
 
           <div className="flex justify-center gap-4 pt-8 border-t border-slate-700">
-            <Link href="/login" className="btn btn-primary">
-              Volver al Registro
-            </Link>
+            {!isLoggedIn && (
+              <Link href="/login" className="btn btn-primary">
+                Volver al Registro
+              </Link>
+            )}
             <Link href="/" className="btn btn-secondary">
               Ver el Consejo
             </Link>

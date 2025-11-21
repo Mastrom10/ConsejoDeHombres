@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import axios from 'axios';
 import Header from '../components/Header';
@@ -13,6 +13,14 @@ export default function LoginPage() {
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [genderConfirmed, setGenderConfirmed] = useState(false);
   const [pendingGoogleAuth, setPendingGoogleAuth] = useState(false);
+
+  // Redirigir si ya está logueado
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      router.push('/');
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
