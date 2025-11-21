@@ -7,9 +7,8 @@ import { EstadoMiembro, EstadoSolicitud } from '@prisma/client';
 
 const router = Router();
 
-router.get('/', authenticate, async (req, res) => {
+router.get('/', async (_req, res) => {
   const solicitudes = await prisma.solicitudMiembro.findMany({
-    where: { usuarioId: { not: req.user!.id } },
     include: { usuario: true },
     orderBy: { fechaCreacion: 'desc' }
   });

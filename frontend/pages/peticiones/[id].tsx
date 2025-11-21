@@ -39,11 +39,7 @@ export default function PeticionDetalle() {
     if (!id) return;
 
     const token = localStorage.getItem('token');
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
-    setIsLoggedIn(true);
+    setIsLoggedIn(!!token);
 
     const userStr = localStorage.getItem('user');
     if (userStr) {
@@ -54,10 +50,12 @@ export default function PeticionDetalle() {
       }
     }
 
+    const config = token
+      ? { headers: { Authorization: `Bearer ${token}` } }
+      : undefined;
+
     axios
-      .get(`${API}/peticiones/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      .get(`${API}/peticiones/${id}`, config)
       .then((res) => {
         setPeticion(res.data);
         setVotos(res.data.votos || []);

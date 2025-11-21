@@ -7,7 +7,7 @@ import { EstadoPeticion } from '@prisma/client';
 
 const router = Router();
 
-router.get('/', authenticate, async (req, res) => {
+router.get('/', async (req, res) => {
   const filter = req.query.estado as EstadoPeticion | undefined;
   const peticiones = await prisma.peticion.findMany({
     where: {
@@ -20,7 +20,7 @@ router.get('/', authenticate, async (req, res) => {
   res.json(peticiones);
 });
 
-router.get('/populares', authenticate, async (_req, res) => {
+router.get('/populares', async (_req, res) => {
   const peticiones = await prisma.peticion.findMany({
     where: { oculta: false },
     take: 20,
@@ -31,7 +31,7 @@ router.get('/populares', authenticate, async (_req, res) => {
 });
 
 // Detalle de una petición con historial de votos
-router.get('/:id', authenticate, async (req, res, next) => {
+router.get('/:id', async (req, res, next) => {
   try {
     const peticion = await prisma.peticion.findUnique({
       where: { id: req.params.id },
@@ -51,13 +51,11 @@ router.get('/:id', authenticate, async (req, res, next) => {
       return res.status(404).json({ message: 'Petición no encontrada' });
     }
 
-    const userId = req.user!.id;
     const votosConReacciones = peticion.votos.map((v) => {
       const upCount = v.reacciones.filter((r) => r.tipo === 'up').length;
       const downCount = v.reacciones.filter((r) => r.tipo === 'down').length;
-      const myReaction = v.reacciones.find((r) => r.usuarioId === userId)?.tipo ?? null;
       const { reacciones, ...rest } = v;
-      return { ...rest, upCount, downCount, myReaction };
+      return { ...rest, upCount, downCount, myReaction: null };
     });
 
     res.json({ ...peticion, votos: votosConReacciones });

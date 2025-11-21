@@ -20,16 +20,8 @@ export default function Solicitudes() {
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
-
     axios
-      .get(`${API}/solicitudes`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      .get(`${API}/solicitudes`)
       .then((res) => setSolicitudes(res.data))
       .catch(() => setSolicitudes([]));
   }, [router]);

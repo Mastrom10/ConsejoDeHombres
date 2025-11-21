@@ -18,18 +18,11 @@ export default function Home() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
-
     const userStr = localStorage.getItem('user');
     if (userStr) setUser(JSON.parse(userStr));
 
     axios
-      .get(`${process.env.NEXT_PUBLIC_API_URL}/peticiones`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      .get(`${process.env.NEXT_PUBLIC_API_URL}/peticiones`)
       .then(res => setPeticiones(res.data))
       .catch(() => setPeticiones([]))
       .finally(() => setLoading(false));
