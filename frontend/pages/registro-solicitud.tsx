@@ -4,6 +4,7 @@ import axios from 'axios';
 import Header from '../components/Header';
 import SEO from '../components/SEO';
 import Link from 'next/link';
+import ImageInput from '../components/ImageInput';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -27,6 +28,36 @@ export default function RegistroSolicitud() {
   const [fotoUrl, setFotoUrl] = useState('');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  
+  // Cargar datos guardados del localStorage al montar
+  useEffect(() => {
+    const saved = localStorage.getItem('solicitud_draft');
+    if (saved) {
+      try {
+        const draft = JSON.parse(saved);
+        setForm(draft.form || form);
+        if (draft.fotoUrl) {
+          setFotoUrl(draft.fotoUrl);
+          setFotoPreview(draft.fotoUrl);
+        }
+      } catch (e) {
+        console.error('Error al cargar borrador:', e);
+      }
+    }
+  }, []);
+  
+  // Guardar en localStorage cuando cambie el formulario
+  useEffect(() => {
+    const draft = {
+      form,
+      fotoUrl,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('solicitud_draft', JSON.stringify(draft));
+  }, [form, fotoUrl]);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [solicitudId, setSolicitudId] = useState<string | null>(null);
 
   useEffect(() => {
     // Verificar que el usuario esté logueado
@@ -34,18 +65,80 @@ export default function RegistroSolicitud() {
     const user = localStorage.getItem('user');
     if (!token || !user) {
       router.push('/login');
-    }
-  }, [router]);
-
-  const handleFotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError('La imagen no puede ser mayor a 5MB');
       return;
     }
 
+    // Cargar solicitud existente si existe
+    const cargarSolicitud = async () => {
+      try {
+        const res = await axios.get(`${API}/solicitudes/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const solicitud = res.data;
+        if (solicitud && solicitud.estadoSolicitud === 'pendiente') {
+          setIsEditing(true);
+          setSolicitudId(solicitud.id);
+          
+          // Extraer solo los nombres de usuario de las URLs de redes sociales
+          let redesParsed: Record<string, string> = {
+            instagram: '',
+            twitter: '',
+            linkedin: '',
+            facebook: '',
+            otro: ''
+          };
+          
+          if (solicitud.redesSociales) {
+            try {
+              const redes = JSON.parse(solicitud.redesSociales);
+              // Extraer nombre de usuario de cada URL
+              if (redes.instagram) {
+                const match = redes.instagram.match(/instagram\.com\/([^\/\?]+)/);
+                redesParsed.instagram = match ? match[1] : redes.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, '');
+              }
+              if (redes.twitter) {
+                const match = redes.twitter.match(/twitter\.com\/([^\/\?]+)/);
+                redesParsed.twitter = match ? match[1] : redes.twitter.replace(/^https?:\/\/(www\.)?twitter\.com\//, '');
+              }
+              if (redes.linkedin) {
+                const match = redes.linkedin.match(/linkedin\.com\/in\/([^\/\?]+)/);
+                redesParsed.linkedin = match ? match[1] : redes.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '');
+              }
+              if (redes.facebook) {
+                const match = redes.facebook.match(/facebook\.com\/([^\/\?]+)/);
+                redesParsed.facebook = match ? match[1] : redes.facebook.replace(/^https?:\/\/(www\.)?facebook\.com\//, '');
+              }
+              if (redes.otro) {
+                redesParsed.otro = redes.otro;
+              }
+            } catch (e) {
+              console.error('Error al parsear redes sociales:', e);
+            }
+          }
+          
+          setForm({
+            textoSolicitud: solicitud.textoSolicitud || '',
+            cartaSolicitud: solicitud.cartaSolicitud || '',
+            redesSociales: redesParsed,
+            codigoAceptado: solicitud.codigoAceptado || false
+          });
+          if (solicitud.fotoSolicitudUrl) {
+            setFotoUrl(solicitud.fotoSolicitudUrl);
+            setFotoPreview(solicitud.fotoSolicitudUrl);
+          }
+        }
+      } catch (err: any) {
+        // Si no hay solicitud o error 404, es normal (usuario nuevo)
+        if (err.response?.status !== 404) {
+          console.error('Error al cargar solicitud:', err);
+        }
+      }
+    };
+
+    cargarSolicitud();
+  }, [router]);
+
+  const handleFotoSelect = (file: File) => {
     setFoto(file);
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -61,10 +154,10 @@ export default function RegistroSolicitud() {
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
-      formData.append('imagenes', foto);
+      formData.append('foto', foto);
 
       const response = await axios.post(
-        `${API}/peticiones/upload`,
+        `${API}/solicitudes/upload-foto`,
         formData,
         {
           headers: {
@@ -74,7 +167,7 @@ export default function RegistroSolicitud() {
         }
       );
 
-      return response.data.urls[0] || '';
+      return response.data.url || '';
     } catch (error: any) {
       setError(error.response?.data?.message || 'Error al subir la foto');
       return '';
@@ -105,33 +198,68 @@ export default function RegistroSolicitud() {
         }
       }
 
-      if (!fotoUrlFinal) {
+      if (!fotoUrlFinal && !fotoUrl) {
         setError('Debes subir una foto para tu solicitud');
         setEnviando(false);
         return;
       }
+      
+      // Si estamos editando y no hay nueva foto, usar la existente
+      if (isEditing && !foto && fotoUrl) {
+        fotoUrlFinal = fotoUrl;
+      }
 
-      // Preparar redes sociales como JSON
-      const redesFiltradas = Object.fromEntries(
-        Object.entries(form.redesSociales).filter(([_, value]) => value.trim() !== '')
-      );
-      const redesSocialesJson = Object.keys(redesFiltradas).length > 0 
-        ? JSON.stringify(redesFiltradas) 
+      // Preparar redes sociales como JSON con URLs completas
+      const redesConUrls: Record<string, string> = {};
+      if (form.redesSociales.instagram.trim()) {
+        redesConUrls.instagram = `https://instagram.com/${form.redesSociales.instagram.trim()}`;
+      }
+      if (form.redesSociales.twitter.trim()) {
+        redesConUrls.twitter = `https://twitter.com/${form.redesSociales.twitter.trim()}`;
+      }
+      if (form.redesSociales.linkedin.trim()) {
+        redesConUrls.linkedin = `https://linkedin.com/in/${form.redesSociales.linkedin.trim()}`;
+      }
+      if (form.redesSociales.facebook.trim()) {
+        redesConUrls.facebook = `https://facebook.com/${form.redesSociales.facebook.trim()}`;
+      }
+      if (form.redesSociales.otro.trim()) {
+        redesConUrls.otro = form.redesSociales.otro.trim();
+      }
+      
+      const redesSocialesJson = Object.keys(redesConUrls).length > 0 
+        ? JSON.stringify(redesConUrls) 
         : null;
 
-      // Crear la solicitud
-      await axios.post(
-        `${API}/solicitudes`,
-        {
-          textoSolicitud: form.textoSolicitud,
-          fotoSolicitudUrl: fotoUrlFinal,
-          cartaSolicitud: form.cartaSolicitud || null,
-          redesSociales: redesSocialesJson || null,
-          codigoAceptado: form.codigoAceptado
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      // Crear o actualizar la solicitud
+      if (isEditing && solicitudId) {
+        await axios.put(
+          `${API}/solicitudes/me`,
+          {
+            textoSolicitud: form.textoSolicitud,
+            fotoSolicitudUrl: fotoUrlFinal,
+            cartaSolicitud: form.cartaSolicitud || null,
+            redesSociales: redesSocialesJson || null,
+            codigoAceptado: form.codigoAceptado
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      } else {
+        await axios.post(
+          `${API}/solicitudes`,
+          {
+            textoSolicitud: form.textoSolicitud,
+            fotoSolicitudUrl: fotoUrlFinal,
+            cartaSolicitud: form.cartaSolicitud || null,
+            redesSociales: redesSocialesJson || null,
+            codigoAceptado: form.codigoAceptado
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
 
+      // Limpiar el borrador después de enviar exitosamente
+      localStorage.removeItem('solicitud_draft');
       router.push('/');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al enviar la solicitud');
@@ -153,10 +281,12 @@ export default function RegistroSolicitud() {
       <main className="flex-1 container mx-auto max-w-3xl p-4 py-12">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-black uppercase tracking-tight mb-2 text-white">
-            Solicitud de Adhesión
+            {isEditing ? 'Modificar Solicitud' : 'Solicitud de Adhesión'}
           </h1>
           <p className="text-secondary">
-            Esta información será pública durante el proceso de evaluación. Sé honesto y claro.
+            {isEditing 
+              ? 'Modifica tu solicitud de adhesión. Los cambios serán visibles para los miembros del Consejo.'
+              : 'Esta información será pública durante el proceso de evaluación. Sé honesto y claro.'}
           </p>
         </div>
 
@@ -169,28 +299,17 @@ export default function RegistroSolicitud() {
 
           {/* Foto de solicitud */}
           <div>
-            <label className="block text-sm font-bold text-slate-300 mb-2">
-              Foto de Solicitud <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-              onChange={handleFotoChange}
+            <ImageInput
+              label="Foto de Solicitud"
+              onImageSelect={handleFotoSelect}
+              preview={fotoPreview}
               disabled={subiendoFoto}
-              className="input text-sm"
+              required
+              maxSize={5}
             />
             <p className="text-xs text-slate-500 mt-1">
               Una sola foto. Máximo 5MB. Formatos: JPEG, PNG, GIF, WEBP.
             </p>
-            {fotoPreview && (
-              <div className="mt-4">
-                <img
-                  src={fotoPreview}
-                  alt="Preview"
-                  className="w-48 h-48 object-cover rounded-lg border border-slate-700"
-                />
-              </div>
-            )}
           </div>
 
           {/* Texto de solicitud (breve) */}
@@ -238,70 +357,90 @@ export default function RegistroSolicitud() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Instagram</label>
-                <input
-                  type="url"
-                  className="input text-sm"
-                  placeholder="https://instagram.com/tu_usuario"
-                  value={form.redesSociales.instagram}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      redesSociales: { ...form.redesSociales, instagram: e.target.value }
-                    })
-                  }
-                />
+                <div className="flex items-center">
+                  <span className="px-3 py-2 bg-slate-800 border border-r-0 border-slate-700 rounded-l text-slate-400 text-sm whitespace-nowrap">
+                    instagram.com/
+                  </span>
+                  <input
+                    type="text"
+                    className="input text-sm rounded-l-none flex-1"
+                    placeholder="tu_usuario"
+                    value={form.redesSociales.instagram}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        redesSociales: { ...form.redesSociales, instagram: e.target.value }
+                      })
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Twitter/X</label>
-                <input
-                  type="url"
-                  className="input text-sm"
-                  placeholder="https://twitter.com/tu_usuario"
-                  value={form.redesSociales.twitter}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      redesSociales: { ...form.redesSociales, twitter: e.target.value }
-                    })
-                  }
-                />
+                <div className="flex items-center">
+                  <span className="px-3 py-2 bg-slate-800 border border-r-0 border-slate-700 rounded-l text-slate-400 text-sm whitespace-nowrap">
+                    twitter.com/
+                  </span>
+                  <input
+                    type="text"
+                    className="input text-sm rounded-l-none flex-1"
+                    placeholder="tu_usuario"
+                    value={form.redesSociales.twitter}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        redesSociales: { ...form.redesSociales, twitter: e.target.value }
+                      })
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">LinkedIn</label>
-                <input
-                  type="url"
-                  className="input text-sm"
-                  placeholder="https://linkedin.com/in/tu_perfil"
-                  value={form.redesSociales.linkedin}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      redesSociales: { ...form.redesSociales, linkedin: e.target.value }
-                    })
-                  }
-                />
+                <div className="flex items-center">
+                  <span className="px-3 py-2 bg-slate-800 border border-r-0 border-slate-700 rounded-l text-slate-400 text-sm whitespace-nowrap">
+                    linkedin.com/in/
+                  </span>
+                  <input
+                    type="text"
+                    className="input text-sm rounded-l-none flex-1"
+                    placeholder="tu_perfil"
+                    value={form.redesSociales.linkedin}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        redesSociales: { ...form.redesSociales, linkedin: e.target.value }
+                      })
+                    }
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Facebook</label>
-                <input
-                  type="url"
-                  className="input text-sm"
-                  placeholder="https://facebook.com/tu_perfil"
-                  value={form.redesSociales.facebook}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      redesSociales: { ...form.redesSociales, facebook: e.target.value }
-                    })
-                  }
-                />
+                <div className="flex items-center">
+                  <span className="px-3 py-2 bg-slate-800 border border-r-0 border-slate-700 rounded-l text-slate-400 text-sm whitespace-nowrap">
+                    facebook.com/
+                  </span>
+                  <input
+                    type="text"
+                    className="input text-sm rounded-l-none flex-1"
+                    placeholder="tu_perfil"
+                    value={form.redesSociales.facebook}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        redesSociales: { ...form.redesSociales, facebook: e.target.value }
+                      })
+                    }
+                  />
+                </div>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-xs text-slate-400 mb-1">Otra red social</label>
                 <input
                   type="url"
                   className="input text-sm"
-                  placeholder="URL de otra red social"
+                  placeholder="URL completa de otra red social"
                   value={form.redesSociales.otro}
                   onChange={(e) =>
                     setForm({
@@ -350,10 +489,10 @@ export default function RegistroSolicitud() {
             </Link>
             <button
               type="submit"
-              disabled={enviando || subiendoFoto || !form.codigoAceptado || !foto || form.textoSolicitud.length < 20}
+              disabled={enviando || subiendoFoto || !form.codigoAceptado || (!foto && !fotoUrl) || form.textoSolicitud.length < 20}
               className="btn btn-primary min-w-[120px] disabled:opacity-50"
             >
-              {subiendoFoto ? 'Subiendo foto...' : enviando ? 'Enviando...' : 'Enviar Solicitud'}
+              {subiendoFoto ? 'Subiendo foto...' : enviando ? (isEditing ? 'Actualizando...' : 'Enviando...') : (isEditing ? 'Actualizar Solicitud' : 'Enviar Solicitud')}
             </button>
           </div>
         </form>

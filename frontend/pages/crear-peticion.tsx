@@ -38,20 +38,24 @@ export default function CrearPeticion() {
     };
   }, [imagePreviews]);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (selectedImages.length + files.length > 5) {
+  const handleImageSelect = (file: File) => {
+    if (selectedImages.length >= 5) {
       setMensaje('Máximo 5 imágenes permitidas');
       setStatus('error');
       return;
     }
 
-    const newFiles = [...selectedImages, ...files];
+    const newFiles = [...selectedImages, file];
     setSelectedImages(newFiles);
 
-    // Crear previews
-    const newPreviews = files.map(file => URL.createObjectURL(file));
-    setImagePreviews([...imagePreviews, ...newPreviews]);
+    // Crear preview
+    const preview = URL.createObjectURL(file);
+    setImagePreviews([...imagePreviews, preview]);
+  };
+
+  const handleFileInputSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach(file => handleImageSelect(file));
   };
 
   const removeImage = (index: number) => {
@@ -186,14 +190,103 @@ export default function CrearPeticion() {
             <label className="block text-sm font-bold text-slate-300 mb-2">
               Imágenes (Opcional) - Máximo 5
             </label>
-            <input
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-              multiple
-              onChange={handleImageSelect}
-              disabled={selectedImages.length >= 5 || uploadingImages}
-              className="input text-sm"
-            />
+            <div className="flex gap-2 flex-wrap mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = 'image/jpeg,image/jpg,image/png,image/gif,image/webp';
+                  input.multiple = true;
+                  input.onchange = (e) => {
+                    const target = e.target as HTMLInputElement;
+                    handleFileInputSelect({ target } as React.ChangeEvent<HTMLInputElement>);
+                  };
+                  input.click();
+                }}
+                disabled={selectedImages.length >= 5 || uploadingImages}
+                className="btn btn-secondary text-sm disabled:opacity-50"
+              >
+                📁 Seleccionar archivos
+              </button>
+              
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ 
+                      video: { facingMode: 'environment' } // Cámara trasera por defecto
+                    });
+                    
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.autoplay = true;
+                    video.playsInline = true;
+                    
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    const modal = document.createElement('div');
+                    modal.className = 'fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4';
+                    
+                    const videoContainer = document.createElement('div');
+                    videoContainer.className = 'relative max-w-2xl w-full';
+                    
+                    const previewVideo = document.createElement('video');
+                    previewVideo.srcObject = stream;
+                    previewVideo.autoplay = true;
+                    previewVideo.playsInline = true;
+                    previewVideo.className = 'w-full rounded-lg';
+                    
+                    const buttonContainer = document.createElement('div');
+                    buttonContainer.className = 'flex gap-4 mt-4 justify-center';
+                    
+                    const captureButton = document.createElement('button');
+                    captureButton.textContent = 'Capturar';
+                    captureButton.className = 'btn btn-primary px-6 py-3 text-lg';
+                    captureButton.onclick = () => {
+                      canvas.width = previewVideo.videoWidth;
+                      canvas.height = previewVideo.videoHeight;
+                      ctx?.drawImage(previewVideo, 0, 0);
+                      stream.getTracks().forEach(track => track.stop());
+                      
+                      canvas.toBlob((blob) => {
+                        if (blob) {
+                          const file = new File([blob], `camera-${Date.now()}.jpg`, { type: 'image/jpeg' });
+                          handleImageSelect(file);
+                        }
+                        document.body.removeChild(modal);
+                      }, 'image/jpeg', 0.9);
+                    };
+                    
+                    const cancelButton = document.createElement('button');
+                    cancelButton.textContent = 'Cancelar';
+                    cancelButton.className = 'btn btn-secondary px-6 py-3 text-lg';
+                    cancelButton.onclick = () => {
+                      stream.getTracks().forEach(track => track.stop());
+                      document.body.removeChild(modal);
+                    };
+                    
+                    buttonContainer.appendChild(captureButton);
+                    buttonContainer.appendChild(cancelButton);
+                    
+                    videoContainer.appendChild(previewVideo);
+                    modal.appendChild(videoContainer);
+                    modal.appendChild(buttonContainer);
+                    
+                    document.body.appendChild(modal);
+                  } catch (err) {
+                    console.error('Error al acceder a la cámara:', err);
+                    setMensaje('No se pudo acceder a la cámara. Asegúrate de dar permisos.');
+                    setStatus('error');
+                  }
+                }}
+                disabled={selectedImages.length >= 5 || uploadingImages}
+                className="btn btn-secondary text-sm disabled:opacity-50"
+              >
+                📷 Usar cámara
+              </button>
+            </div>
             <p className="text-xs text-slate-500 mt-1">
               Formatos permitidos: JPEG, PNG, GIF, WEBP. Tamaño máximo: 5MB por imagen.
             </p>

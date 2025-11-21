@@ -3,6 +3,7 @@ import Header from '../components/Header';
 import SEO from '../components/SEO';
 import axios from 'axios';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -141,9 +142,15 @@ export default function Perfil() {
                           <span>{votosActuales} Votos a favor</span>
                           <span>Objetivo: {votosNecesarios}</span>
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-3 italic text-center">
+                      <p className="text-[10px] text-slate-500 mt-3 italic text-center mb-3">
                           "La paciencia es la primera virtud del caballero."
                       </p>
+                      <Link
+                        href="/registro-solicitud"
+                        className="block w-full text-center btn btn-secondary text-xs py-2"
+                      >
+                        ✏️ Modificar mi Solicitud
+                      </Link>
                   </div>
               )}
             </div>
@@ -159,7 +166,9 @@ export default function Perfil() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-4">
                   <div>
                     <span className="block text-primary/60 text-[10px] uppercase tracking-[0.2em] mb-1">Rango Operativo</span>
-                    <span className="text-white font-bold text-lg font-serif">{user.rol.toUpperCase()}</span>
+                    <span className="text-white font-bold text-lg font-serif">
+                      {user.estadoMiembro === 'pendiente_aprobacion' ? 'ASPIRANTE' : user.rol.toUpperCase()}
+                    </span>
                   </div>
                   <div>
                     <span className="block text-primary/60 text-[10px] uppercase tracking-[0.2em] mb-1">Fecha de Juramento</span>
@@ -201,21 +210,35 @@ export default function Perfil() {
                  </div>
               </div>
 
-              {/* Borrar cuenta */}
+              {/* Zona de Autodestrucción */}
               <div className="card border border-red-900/50 bg-red-950/40">
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-lg font-black uppercase tracking-widest text-red-400">Autodestrucción del Expediente</h3>
+                  <h3 className="text-lg font-black uppercase tracking-widest text-red-400">Zona de Autodestrucción</h3>
                   <span className="text-xs text-red-400 font-mono border border-red-500/50 px-2 py-0.5 rounded">ACCION FINAL</span>
                 </div>
                 <p className="text-sm text-red-200/80 mb-4">
                   Esta operación eliminará tu cuenta del Consejo, junto con tus votos, solicitudes y peticiones. No hay marcha atrás.
                 </p>
-                <button
-                  onClick={handleDeleteAccount}
-                  className="btn btn-secondary border-red-600/60 text-red-300 hover:bg-red-800/40 hover:text-red-100"
-                >
-                  🧨 Borrar cuenta y abandonar el Consejo
-                </button>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => {
+                      if (confirm('¿Seguro que quieres cerrar sesión?')) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        router.push('/login');
+                      }
+                    }}
+                    className="btn btn-secondary border-red-600/60 text-red-300 hover:bg-red-800/40 hover:text-red-100"
+                  >
+                    🚪 Desertar (Cerrar Sesión)
+                  </button>
+                  <button
+                    onClick={handleDeleteAccount}
+                    className="btn btn-secondary border-red-600/60 text-red-300 hover:bg-red-800/40 hover:text-red-100"
+                  >
+                    🧨 Borrar cuenta y abandonar el Consejo
+                  </button>
+                </div>
               </div>
             </div>
           </div>

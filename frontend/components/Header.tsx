@@ -23,6 +23,7 @@ export default function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [estadoVotos, setEstadoVotos] = useState<EstadoVotos | null>(null);
   const [tiempoRestante, setTiempoRestante] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -32,6 +33,21 @@ export default function Header() {
       setUser(JSON.parse(userStr));
     }
   }, []);
+
+  // Cerrar menú móvil al hacer clic fuera
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.mobile-menu-container')) {
+        setMobileMenuOpen(false);
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (!isLoggedIn || !user || user.estadoMiembro !== 'miembro_aprobado') return;
@@ -145,9 +161,7 @@ export default function Header() {
                   )}
                 </div>
               )}
-              <button onClick={logout} className="text-red-500 hover:text-red-400 transition-colors border border-red-900/30 px-3 py-1 rounded hover:bg-red-900/10">
-                Desertar
-              </button>
+              <Link href="/perfil" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Expediente</Link>
             </>
           ) : (
             <Link href="/login" className="btn btn-primary py-2 px-4 text-xs shadow-[0_0_15px_rgba(56,189,248,0.3)]">
@@ -157,31 +171,80 @@ export default function Header() {
         </nav>
 
         {/* Acciones compactas para móvil */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="flex md:hidden items-center gap-2 relative mobile-menu-container">
           {isLoggedIn ? (
             <>
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className="text-[10px] font-bold uppercase tracking-widest text-primary border border-primary/40 px-2 py-1 rounded"
-                >
-                  Admin
-                </Link>
-              )}
-              {isApproved && (
-                <Link
-                  href="/crear-peticion"
-                  className="text-[10px] font-bold uppercase tracking-widest text-primary border border-primary/40 px-2 py-1 rounded"
-                >
-                  Elevar
-                </Link>
-              )}
               <button
-                onClick={logout}
-                className="text-[10px] font-bold uppercase tracking-widest text-red-400 border border-red-500/40 px-2 py-1 rounded"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="text-2xl hover:opacity-80 transition-opacity"
+                aria-label="Menú"
               >
-                Desertar
+                ☰
               </button>
+              
+              {mobileMenuOpen && (
+                <div className="absolute top-full right-0 mt-2 bg-surface border border-slate-700 rounded-lg shadow-xl z-50 min-w-[200px] py-2">
+                  <Link
+                    href="/codigo-hombres"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                  >
+                    Código
+                  </Link>
+                  <Link
+                    href="/"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                  >
+                    Peticiones
+                  </Link>
+                  <Link
+                    href="/solicitudes"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                  >
+                    Solicitudes
+                  </Link>
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary hover:bg-slate-800 transition-colors"
+                    >
+                      Admin
+                    </Link>
+                  )}
+                  {isApproved && (
+                    <Link
+                      href="/crear-peticion"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-4 py-2 text-xs font-bold uppercase tracking-widest text-primary hover:bg-slate-800 transition-colors"
+                    >
+                      Elevar Petición
+                    </Link>
+                  )}
+                  {isApproved && estadoVotos && (
+                    <div className="px-4 py-2 border-t border-slate-700">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-slate-300">🗳️</span>
+                        <span className="text-slate-300 font-bold">{estadoVotos.votosDisponibles}/{estadoVotos.maxVotos}</span>
+                        {estadoVotos.votosDisponibles < estadoVotos.maxVotos && tiempoRestante > 0 && (
+                          <span className="text-slate-400 font-mono text-[10px]">
+                            {formatearTiempo(tiempoRestante)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <Link
+                    href="/perfil"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-4 py-2 text-xs font-bold uppercase tracking-widest text-slate-300 hover:bg-slate-800 hover:text-white transition-colors border-t border-slate-700"
+                  >
+                    Expediente
+                  </Link>
+                </div>
+              )}
             </>
           ) : (
             <Link

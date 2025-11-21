@@ -32,12 +32,31 @@ export default function Solicitudes() {
   const [votando, setVotando] = useState<string | null>(null);
   const [comentarios, setComentarios] = useState<Record<string, string>>({});
   const [tipoVoto, setTipoVoto] = useState<Record<string, 'aprobar' | 'rechazar'>>({});
+  const [miSolicitud, setMiSolicitud] = useState<Solicitud | null>(null);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
     if (userStr) {
       try {
-        setUser(JSON.parse(userStr));
+        const parsedUser = JSON.parse(userStr);
+        setUser(parsedUser);
+        
+        // Cargar mi solicitud si existe
+        if (token && parsedUser.estadoMiembro === 'pendiente_aprobacion') {
+          axios
+            .get(`${API}/solicitudes/me`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+            .then((res) => {
+              if (res.data && res.data.estadoSolicitud === 'pendiente') {
+                setMiSolicitud(res.data);
+              }
+            })
+            .catch(() => {
+              // No hay solicitud o error, es normal
+            });
+        }
       } catch {
         setUser(null);
       }
@@ -116,6 +135,24 @@ export default function Solicitudes() {
               Aquí se listan los aspirantes que buscan ingresar al Consejo. Tu voto ayuda a decidir
               quién se sienta en la mesa.
             </p>
+            {miSolicitud && miSolicitud.estadoSolicitud === 'pendiente' && (
+              <div className="mt-4 p-4 bg-amber-900/20 border border-amber-700/50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-amber-400 mb-1">Tu solicitud está pendiente</p>
+                    <p className="text-xs text-amber-300/70">
+                      Puedes modificar tu solicitud mientras esté pendiente de aprobación.
+                    </p>
+                  </div>
+                  <a
+                    href="/registro-solicitud"
+                    className="btn btn-secondary text-xs px-4 py-2 whitespace-nowrap"
+                  >
+                    ✏️ Modificar mi Solicitud
+                  </a>
+                </div>
+              </div>
+            )}
           </header>
 
           {solicitudes.length === 0 ? (

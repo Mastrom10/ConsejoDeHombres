@@ -5,8 +5,24 @@ import { solicitudSchema, votoSolicitudSchema } from '../dtos/solicitudDtos';
 import { evaluateThreshold, requiredValidationsByUserCount } from '../services/rulesService';
 import { EstadoMiembro, EstadoSolicitud } from '@prisma/client';
 import { consumirVoto } from '../services/votosService';
+import { uploadImages } from '../middlewares/upload';
+import { uploadImageToS3 } from '../services/s3Service';
 
 const router = Router();
+
+// Endpoint para subir foto de solicitud (solo requiere autenticación, no ser miembro aprobado)
+router.post('/upload-foto', authenticate, uploadImages.single('foto'), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No se proporcionó una imagen' });
+    }
+
+    const imageUrl = await uploadImageToS3(req.file, 'solicitudes');
+    res.json({ url: imageUrl });
+  } catch (e) {
+    next(e);
+  }
+});
 
 router.get('/', async (_req, res) => {
   // Obtener solicitudes existentes
@@ -94,6 +110,57 @@ router.post('/', authenticate, async (req, res, next) => {
       }
     });
     res.status(201).json(solicitud);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.put('/me', authenticate, async (req, res, next) => {
+  try {
+    const parsed = solicitudSchema.parse(req.body);
+    
+    // Buscar la solicitud del usuario
+    const solicitudExistente = await prisma.solicitudMiembro.findFirst({
+      where: { usuarioId: req.user!.id }
+    });
+    
+    if (!solicitudExistente) {
+      return res.status(404).json({ message: 'No tienes una solicitud para modificar' });
+    }
+    
+    // Solo permitir modificar si está pendiente
+    if (solicitudExistente.estadoSolicitud !== 'pendiente') {
+      return res.status(400).json({ message: 'Solo puedes modificar solicitudes pendientes' });
+    }
+
+    const solicitud = await prisma.solicitudMiembro.update({
+      where: { id: solicitudExistente.id },
+      data: {
+        textoSolicitud: parsed.textoSolicitud,
+        fotoSolicitudUrl: parsed.fotoSolicitudUrl,
+        cartaSolicitud: parsed.cartaSolicitud || null,
+        redesSociales: parsed.redesSociales || null,
+        codigoAceptado: parsed.codigoAceptado
+      }
+    });
+    res.json(solicitud);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/me', authenticate, async (req, res, next) => {
+  try {
+    const solicitud = await prisma.solicitudMiembro.findFirst({
+      where: { usuarioId: req.user!.id },
+      include: { usuario: true }
+    });
+    
+    if (!solicitud) {
+      return res.status(404).json({ message: 'No tienes una solicitud' });
+    }
+    
+    res.json(solicitud);
   } catch (e) {
     next(e);
   }
