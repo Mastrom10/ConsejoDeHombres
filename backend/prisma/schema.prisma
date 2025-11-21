@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -37,6 +37,7 @@ enum EstadoPeticion {
 enum TipoVoto {
   aprobar
   rechazar
+  debatir
 }
 
 enum TipoReaccionVoto {
@@ -45,57 +46,58 @@ enum TipoReaccionVoto {
 }
 
 model Usuario {
-  id             String           @id @default(cuid())
-  displayName    String
-  email          String           @unique
-  passwordHash   String?          @map("password_hash")
-  avatarUrl      String?
-  genero         String?
-  fechaNacimiento DateTime?
-  edad           Int?
-  estadoMiembro  EstadoMiembro    @default(pendiente_aprobacion)
-  rol            RolUsuario       @default(miembro)
-  bio            String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  solicitudes    SolicitudMiembro[]
-  peticiones     Peticion[]       @relation("PeticionAutor")
-  votosPeticiones PeticionVoto[]
+  id               String                 @id @default(cuid())
+  displayName      String
+  email            String                 @unique
+  passwordHash     String?                @map("password_hash")
+  avatarUrl        String?
+  genero           String?
+  fechaNacimiento  DateTime?
+  edad             Int?
+  estadoMiembro    EstadoMiembro          @default(pendiente_aprobacion)
+  rol              RolUsuario             @default(miembro)
+  bio              String?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  solicitudes      SolicitudMiembro[]
+  peticiones       Peticion[]             @relation("PeticionAutor")
+  votosPeticiones  PeticionVoto[]
   votosSolicitudes SolicitudVoto[]
-  likes          PeticionLike[]
-  reportes       Reporte[]        @relation("ReporteAutor")
-  reaccionesVotos PeticionVotoReaction[]
+  likes            PeticionLike[]
+  reportes         Reporte[]              @relation("ReporteAutor")
+  reaccionesVotos  PeticionVotoReaction[]
 }
 
 model SolicitudMiembro {
-  id                String        @id @default(cuid())
-  usuario           Usuario       @relation(fields: [usuarioId], references: [id])
+  id                String          @id @default(cuid())
+  usuario           Usuario         @relation(fields: [usuarioId], references: [id])
   usuarioId         String
   textoSolicitud    String
   fotoSolicitudUrl  String
   estadoSolicitud   EstadoSolicitud @default(pendiente)
-  fechaCreacion     DateTime      @default(now())
+  fechaCreacion     DateTime        @default(now())
   fechaResolucion   DateTime?
-  totalAprobaciones Int           @default(0)
-  totalRechazos     Int           @default(0)
+  totalAprobaciones Int             @default(0)
+  totalRechazos     Int             @default(0)
   votos             SolicitudVoto[]
 }
 
 model SolicitudVoto {
-  id              String        @id @default(cuid())
-  solicitud       SolicitudMiembro @relation(fields: [solicitudId], references: [id])
-  solicitudId     String
-  miembroVotante  Usuario       @relation(fields: [miembroVotanteId], references: [id])
+  id               String           @id @default(cuid())
+  solicitud        SolicitudMiembro @relation(fields: [solicitudId], references: [id])
+  solicitudId      String
+  miembroVotante   Usuario          @relation(fields: [miembroVotanteId], references: [id])
   miembroVotanteId String
-  tipoVoto        TipoVoto
-  mensaje         String?
-  fechaVoto       DateTime      @default(now())
+  tipoVoto         TipoVoto
+  mensaje          String?
+  fechaVoto        DateTime         @default(now())
+
   @@unique([solicitudId, miembroVotanteId])
 }
 
 model Peticion {
-  id                String        @id @default(cuid())
-  autor             Usuario       @relation("PeticionAutor", fields: [autorId], references: [id])
+  id                String         @id @default(cuid())
+  autor             Usuario        @relation("PeticionAutor", fields: [autorId], references: [id])
   autorId           String
   titulo            String
   descripcion       String
@@ -112,30 +114,33 @@ model Peticion {
   votos             PeticionVoto[]
   hearts            PeticionLike[]
   reportes          Reporte[]      @relation("ReportePeticion")
+
   @@index([estadoPeticion])
   @@index([createdAt])
 }
 
 model PeticionVoto {
-  id                String     @id @default(cuid())
-  peticion          Peticion   @relation(fields: [peticionId], references: [id])
-  peticionId        String
-  miembroVotante    Usuario    @relation(fields: [miembroVotanteId], references: [id])
-  miembroVotanteId  String
-  tipoVoto          TipoVoto
-  mensaje           String?
-  fechaVoto         DateTime   @default(now())
-  reacciones        PeticionVotoReaction[]
+  id               String                 @id @default(cuid())
+  peticion         Peticion               @relation(fields: [peticionId], references: [id])
+  peticionId       String
+  miembroVotante   Usuario                @relation(fields: [miembroVotanteId], references: [id])
+  miembroVotanteId String
+  tipoVoto         TipoVoto
+  mensaje          String?
+  fechaVoto        DateTime               @default(now())
+  reacciones       PeticionVotoReaction[]
+
   @@unique([peticionId, miembroVotanteId])
 }
 
 model PeticionLike {
-  id               String   @id @default(cuid())
-  peticion         Peticion @relation(fields: [peticionId], references: [id])
-  peticionId       String
-  usuario          Usuario  @relation(fields: [usuarioId], references: [id])
-  usuarioId        String
-  createdAt        DateTime @default(now())
+  id         String   @id @default(cuid())
+  peticion   Peticion @relation(fields: [peticionId], references: [id])
+  peticionId String
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  usuarioId  String
+  createdAt  DateTime @default(now())
+
   @@unique([peticionId, usuarioId])
 }
 
@@ -161,13 +166,13 @@ model Configuracion {
 }
 
 model Reporte {
-  id            String   @id @default(cuid())
-  tipo          String
-  descripcion   String
-  autor         Usuario  @relation("ReporteAutor", fields: [autorId], references: [id])
-  autorId       String
-  peticion      Peticion? @relation("ReportePeticion", fields: [peticionId], references: [id])
-  peticionId    String?
-  estado        String   @default("pendiente")
-  createdAt     DateTime @default(now())
+  id          String    @id @default(cuid())
+  tipo        String
+  descripcion String
+  autor       Usuario   @relation("ReporteAutor", fields: [autorId], references: [id])
+  autorId     String
+  peticion    Peticion? @relation("ReportePeticion", fields: [peticionId], references: [id])
+  peticionId  String?
+  estado      String    @default("pendiente")
+  createdAt   DateTime  @default(now())
 }

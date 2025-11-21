@@ -8,8 +8,14 @@ export const createPeticionSchema = z.object({
 });
 
 export const votoPeticionSchema = z.object({
-  tipoVoto: z.enum(['aprobar', 'rechazar']),
+  tipoVoto: z.enum(['aprobar', 'rechazar', 'debatir']),
   mensaje: z.string().optional()
-}).refine((data) => data.tipoVoto === 'aprobar' || (data.mensaje && data.mensaje.length > 3), {
-  message: 'Mensaje obligatorio en caso de rechazo'
+}).refine((data) => {
+  // Mensaje obligatorio para rechazar o debatir
+  if (data.tipoVoto === 'rechazar' || data.tipoVoto === 'debatir') {
+    return data.mensaje && data.mensaje.length > 3;
+  }
+  return true;
+}, {
+  message: 'Mensaje obligatorio para rechazar o debatir'
 });

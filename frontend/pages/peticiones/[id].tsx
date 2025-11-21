@@ -7,7 +7,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 type VotoConAutor = {
   id: string;
-  tipoVoto: 'aprobar' | 'rechazar';
+  tipoVoto: 'aprobar' | 'rechazar' | 'debatir';
   mensaje?: string | null;
   fechaVoto: string;
   miembroVotante: { id: string; displayName: string; avatarUrl?: string | null };
@@ -27,8 +27,9 @@ export default function PeticionDetalle() {
   const [peticion, setPeticion] = useState<any>(null);
   const [votos, setVotos] = useState<VotoConAutor[]>([]);
   const [mensaje, setMensaje] = useState('');
-  const [voto, setVoto] = useState<'aprobar' | 'rechazar'>('aprobar');
+  const [voto, setVoto] = useState<'aprobar' | 'rechazar' | 'debatir'>('aprobar');
   const [comentario, setComentario] = useState('');
+  const [miVotoActual, setMiVotoActual] = useState<'aprobar' | 'rechazar' | 'debatir' | null>(null);
   const [reportando, setReportando] = useState(false);
   const [mensajeReporte, setMensajeReporte] = useState('');
   const [textoReporte, setTextoReporte] = useState('');
@@ -59,6 +60,15 @@ export default function PeticionDetalle() {
       .then((res) => {
         setPeticion(res.data);
         setVotos(res.data.votos || []);
+        // Buscar si el usuario ya votó
+        if (user) {
+          const miVoto = res.data.votos?.find((v: VotoConAutor) => v.miembroVotante.id === user.id);
+          if (miVoto) {
+            setMiVotoActual(miVoto.tipoVoto);
+            setVoto(miVoto.tipoVoto);
+            setComentario(miVoto.mensaje || '');
+          }
+        }
       })
       .catch(() => setMensaje('No se pudo cargar la petición.'));
   }, [id, router]);
@@ -71,12 +81,13 @@ export default function PeticionDetalle() {
     try {
       const token = localStorage.getItem('token');
       if (!token || !canVote) return;
-      await axios.post(
+      const response = await axios.post(
         `${API}/peticiones/${id}/votar`,
         { tipoVoto: voto, mensaje: comentario },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      setMensaje('Voto registrado correctamente.');
+      setMensaje(response.data.actualizado ? 'Voto actualizado correctamente.' : 'Voto registrado correctamente.');
+      setMiVotoActual(voto);
       // Recargar historial de votos
       const res = await axios.get(`${API}/peticiones/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -139,7 +150,7 @@ export default function PeticionDetalle() {
   const porcentaje = Math.round((peticion.totalAprobaciones / Math.max(1, peticion.totalAprobaciones + peticion.totalRechazos)) * 100);
 
   return (
-    <>
+    <div className="min-h-screen bg-background">
       <Header />
       <main className="max-w-5xl mx-auto px-4 py-10 text-slate-100">
         <div className="card space-y-6">
@@ -187,6 +198,11 @@ export default function PeticionDetalle() {
                 Solo los miembros aprobados pueden votar sobre esta petición.
               </p>
             )}
+            {miVotoActual && (
+              <p className="text-xs text-amber-400 bg-amber-900/20 border border-amber-500/30 rounded-lg px-3 py-2">
+                Ya has {miVotoActual === 'aprobar' ? 'aprobado' : miVotoActual === 'rechazar' ? 'rechazado' : 'comentado'} esta petición. Puedes cambiar tu opinión.
+              </p>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <button
                 className={`btn ${voto === 'aprobar' ? 'btn-primary' : 'btn-secondary'}`}
@@ -202,25 +218,38 @@ export default function PeticionDetalle() {
               >
                 👎 Rechazar
               </button>
+              <button
+                className={`btn ${voto === 'debatir' ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => canVote && setVoto('debatir')}
+                disabled={!canVote}
+                title="Comentar sin votar. Aparecerá en el historial pero no contará como voto."
+              >
+                💬 Debatir
+              </button>
             </div>
             <textarea
               rows={3}
               className="input bg-slate-900/70 mt-2"
               placeholder={
                 canVote
-                  ? 'Comentario (obligatorio si rechazas)'
+                  ? voto === 'debatir' 
+                    ? 'Escribe tu comentario o argumento (obligatorio)'
+                    : voto === 'rechazar'
+                    ? 'Comentario (obligatorio si rechazas)'
+                    : 'Comentario opcional'
                   : 'Debes ser miembro aprobado para emitir tu veredicto.'
               }
               value={comentario}
               onChange={(e) => setComentario(e.target.value)}
               disabled={!canVote}
+              required={voto === 'rechazar' || voto === 'debatir'}
             />
             <button
               className="btn btn-primary w-full md:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
               onClick={votar}
-              disabled={!canVote}
+              disabled={!canVote || (voto !== 'aprobar' && (!comentario || comentario.length < 4))}
             >
-              Enviar voto
+              {miVotoActual ? 'Actualizar ' : 'Enviar '}{voto === 'debatir' ? 'comentario' : 'voto'}
             </button>
             {mensaje && (
               <p className="mt-2 text-sm text-slate-200 bg-slate-900/60 border border-slate-700 rounded-lg px-3 py-2">
@@ -231,17 +260,30 @@ export default function PeticionDetalle() {
 
           <section className="border-t border-slate-700 pt-6 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-slate-100">Denunciar esta petición</h2>
+              <div>
+                <h2 className="text-lg font-bold text-slate-100">Denunciar esta petición</h2>
+                <p className="text-xs text-secondary mt-1">
+                  Solo para contenido inapropiado o ilegal. No es para rechazar la petición.
+                </p>
+              </div>
               {!reportando && (
-                <button
-                  className="btn btn-secondary text-sm"
-                  onClick={() => {
-                    setReportando(true);
-                    setMensajeReporte('');
-                  }}
-                >
-                  🚩 Denunciar
-                </button>
+                <div className="relative group">
+                  <button
+                    className="btn btn-secondary text-xs py-1.5 px-3 opacity-70 hover:opacity-100 transition-opacity"
+                    onClick={() => {
+                      setReportando(true);
+                      setMensajeReporte('');
+                    }}
+                    title="Denunciar contenido inapropiado o ilegal. Esto no rechaza la petición, solo reporta contenido que viola las reglas del Consejo."
+                  >
+                    🚩 Denunciar
+                  </button>
+                  <div className="absolute right-0 top-full mt-2 w-64 p-3 bg-slate-900 border border-slate-700 rounded-lg text-xs text-slate-300 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                    <p className="font-semibold text-amber-400 mb-1">⚠️ Denuncia por contenido inapropiado</p>
+                    <p>Este botón es para reportar contenido que viola las reglas del Consejo (contenido ilegal, inapropiado, etc.).</p>
+                    <p className="mt-2 text-slate-400">No es para rechazar la petición. Para rechazar, usa el botón "Rechazar" en la sección de veredicto.</p>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -314,10 +356,12 @@ export default function PeticionDetalle() {
                         className={
                           v.tipoVoto === 'aprobar'
                             ? 'text-xs font-bold text-green-400'
-                            : 'text-xs font-bold text-red-400'
+                            : v.tipoVoto === 'rechazar'
+                            ? 'text-xs font-bold text-red-400'
+                            : 'text-xs font-bold text-blue-400'
                         }
                       >
-                        {v.tipoVoto === 'aprobar' ? 'Aprobó' : 'Rechazó'}
+                        {v.tipoVoto === 'aprobar' ? 'Aprobó' : v.tipoVoto === 'rechazar' ? 'Rechazó' : 'Comentó'}
                       </span>
                       <span className="text-xs text-slate-500">
                         {new Date(v.fechaVoto).toLocaleString()}
@@ -328,7 +372,9 @@ export default function PeticionDetalle() {
                         ? v.mensaje
                         : v.tipoVoto === 'aprobar'
                         ? 'Sin comentario adicional (voto a favor).'
-                        : 'Sin comentario adicional (voto en contra).'}
+                        : v.tipoVoto === 'rechazar'
+                        ? 'Sin comentario adicional (voto en contra).'
+                        : 'Sin comentario.'}
                     </p>
                     <div className="mt-2 flex items-center gap-3 text-xs text-slate-400">
                       <button
@@ -363,6 +409,6 @@ export default function PeticionDetalle() {
           </section>
         </div>
       </main>
-    </>
+    </div>
   );
 }

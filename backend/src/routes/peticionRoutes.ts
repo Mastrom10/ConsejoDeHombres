@@ -218,7 +218,30 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
       return res.status(400).json({ message: 'No puedes votar tu propia petición.' });
     }
 
-    try {
+    // Buscar si ya existe un voto de este usuario
+    const votoExistente = await prisma.peticionVoto.findUnique({
+      where: {
+        peticionId_miembroVotanteId: {
+          peticionId,
+          miembroVotanteId: req.user!.id
+        }
+      }
+    });
+
+    let votoAnterior: 'aprobar' | 'rechazar' | 'debatir' | null = null;
+    if (votoExistente) {
+      votoAnterior = votoExistente.tipoVoto as 'aprobar' | 'rechazar' | 'debatir';
+      // Actualizar el voto existente
+      await prisma.peticionVoto.update({
+        where: { id: votoExistente.id },
+        data: {
+          tipoVoto: parsed.tipoVoto,
+          mensaje: parsed.mensaje,
+          fechaVoto: new Date() // Actualizar fecha del voto
+        }
+      });
+    } else {
+      // Crear nuevo voto
       await prisma.peticionVoto.create({
         data: {
           peticionId,
@@ -227,33 +250,48 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
           mensaje: parsed.mensaje
         }
       });
-    } catch (e: any) {
-      // Manejar caso de voto duplicado (constraint única peticionId + miembroVotanteId)
-      if (e?.code === 'P2002') {
-        return res.status(400).json({ message: 'Ya has votado esta petición.' });
-      }
-      throw e;
     }
+
+    // Calcular nuevos totales considerando el cambio de voto
+    let nuevosAprobaciones = peticion.totalAprobaciones;
+    let nuevosRechazos = peticion.totalRechazos;
+
+    // Restar el voto anterior si existía
+    if (votoAnterior === 'aprobar') {
+      nuevosAprobaciones = Math.max(0, nuevosAprobaciones - 1);
+    } else if (votoAnterior === 'rechazar') {
+      nuevosRechazos = Math.max(0, nuevosRechazos - 1);
+    }
+    // 'debatir' no cuenta en los totales, así que no restamos nada
+
+    // Sumar el nuevo voto (solo si no es 'debatir')
+    if (parsed.tipoVoto === 'aprobar') {
+      nuevosAprobaciones += 1;
+    } else if (parsed.tipoVoto === 'rechazar') {
+      nuevosRechazos += 1;
+    }
+    // 'debatir' no cuenta en los totales
 
     let config = await prisma.configuracion.findFirst();
     if (!config) {
       config = await prisma.configuracion.create({ data: {} });
     }
-    const totals = {
-      totalAprobaciones: (peticion?.totalAprobaciones || 0) + (parsed.tipoVoto === 'aprobar' ? 1 : 0),
-      totalRechazos: (peticion?.totalRechazos || 0) + (parsed.tipoVoto === 'rechazar' ? 1 : 0)
-    };
-    const estado = evaluatePeticion({ totalAprobaciones: totals.totalAprobaciones, totalRechazos: totals.totalRechazos, config });
+    const estado = evaluatePeticion({ 
+      totalAprobaciones: nuevosAprobaciones, 
+      totalRechazos: nuevosRechazos, 
+      config 
+    });
+    
     await prisma.peticion.update({
       where: { id: peticionId },
       data: {
-        totalAprobaciones: totals.totalAprobaciones,
-        totalRechazos: totals.totalRechazos,
+        totalAprobaciones: nuevosAprobaciones,
+        totalRechazos: nuevosRechazos,
         estadoPeticion: estado as EstadoPeticion,
         fechaResolucion: estado === 'en_revision' ? undefined : new Date()
       }
     });
-    res.json({ estado });
+    res.json({ estado, actualizado: !!votoExistente });
   } catch (e) {
     next(e);
   }
