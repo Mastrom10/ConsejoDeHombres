@@ -20,7 +20,33 @@ export default function LoginPage() {
       
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      router.push('/');
+      
+      if (isLogin) {
+        router.push('/');
+      } else {
+        // Si es registro, verificar si necesita completar solicitud
+        const user = data.user;
+        if (user.estadoMiembro === 'pendiente_aprobacion') {
+          // Verificar si ya tiene una solicitud
+          try {
+            const solicitudesRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/solicitudes`, {
+              headers: { Authorization: `Bearer ${data.token}` }
+            });
+            const tieneSolicitud = solicitudesRes.data.some((s: any) => 
+              s.usuarioId === user.id || s.id?.startsWith(`virtual-${user.id}`)
+            );
+            if (!tieneSolicitud) {
+              router.push('/registro-solicitud');
+              return;
+            }
+          } catch {
+            // Si hay error, igual redirigir a completar solicitud
+            router.push('/registro-solicitud');
+            return;
+          }
+        }
+        router.push('/');
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Error al conectar');
     }
@@ -112,8 +138,14 @@ export default function LoginPage() {
 
               <a href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google`} className="btn btn-secondary w-full flex items-center justify-center gap-2 mb-6 hover:bg-white hover:text-black transition-colors">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/></svg>
-                Google
+                {isLogin ? 'Google' : 'Continuar con Google'}
               </a>
+              
+              {!isLogin && (
+                <p className="text-xs text-slate-500 text-center mb-4">
+                  Al registrarte, deberás completar tu solicitud de adhesión
+                </p>
+              )}
 
               <p className="text-sm text-secondary">
                 {isLogin ? '¿Aún no eres miembro?' : '¿Ya tienes tus credenciales?'}

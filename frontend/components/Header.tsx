@@ -106,6 +106,9 @@ export default function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 text-xs font-bold tracking-widest uppercase text-slate-400">
+          <Link href="/codigo-hombres" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">
+            Código
+          </Link>
           {isLoggedIn && (
             <>
               <Link href="/" className="hover:text-white transition-colors hover:underline decoration-primary underline-offset-4">Peticiones</Link>

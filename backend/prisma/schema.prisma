@@ -76,6 +76,9 @@ model SolicitudMiembro {
   usuarioId         String
   textoSolicitud    String
   fotoSolicitudUrl  String
+  cartaSolicitud    String?         // Carta de motivos para unirse
+  redesSociales     String?         // JSON con links a redes sociales
+  codigoAceptado    Boolean         @default(false) // Si aceptó el código de hombres
   estadoSolicitud   EstadoSolicitud @default(pendiente)
   fechaCreacion     DateTime        @default(now())
   fechaResolucion   DateTime?

@@ -9,6 +9,9 @@ type Solicitud = {
   id: string;
   textoSolicitud: string;
   fotoSolicitudUrl: string;
+  cartaSolicitud?: string | null;
+  redesSociales?: string | null;
+  codigoAceptado?: boolean;
   estadoSolicitud: string;
   totalAprobaciones: number;
   totalRechazos: number;
@@ -142,12 +145,51 @@ export default function Solicitudes() {
                           {s.esVirtual && (
                             <span className="ml-2 text-amber-400">(Solicitud automática)</span>
                           )}
+                          {s.codigoAceptado && (
+                            <span className="ml-2 text-green-400">✓ Código aceptado</span>
+                          )}
                         </p>
                       </div>
                     </div>
-                    <p className="text-sm text-slate-200 whitespace-pre-line">
-                      {s.textoSolicitud}
-                    </p>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-300 mb-2">Presentación:</p>
+                      <p className="text-sm text-slate-200 whitespace-pre-line">
+                        {s.textoSolicitud}
+                      </p>
+                    </div>
+                    {s.cartaSolicitud && (
+                      <div>
+                        <p className="text-sm font-semibold text-slate-300 mb-2">Carta de Solicitud:</p>
+                        <p className="text-sm text-slate-200 whitespace-pre-line bg-slate-900/50 p-3 rounded border border-slate-700">
+                          {s.cartaSolicitud}
+                        </p>
+                      </div>
+                    )}
+                    {s.redesSociales && (
+                      <div>
+                        <p className="text-sm font-semibold text-slate-300 mb-2">Redes Sociales:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {(() => {
+                            try {
+                              const redes = JSON.parse(s.redesSociales);
+                              return Object.entries(redes).map(([red, url]) => (
+                                <a
+                                  key={red}
+                                  href={url as string}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs px-3 py-1 rounded bg-slate-800 border border-slate-700 hover:border-primary text-primary hover:text-cyan-300 transition-colors"
+                                >
+                                  {red.charAt(0).toUpperCase() + red.slice(1)}
+                                </a>
+                              ));
+                            } catch {
+                              return null;
+                            }
+                          })()}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-4 text-xs text-secondary">
                       <span>👍 {s.totalAprobaciones} a favor</span>
                       <span>👎 {s.totalRechazos} en contra</span>

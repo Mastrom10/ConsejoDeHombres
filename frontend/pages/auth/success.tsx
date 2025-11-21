@@ -30,6 +30,26 @@ export default function AuthSuccessPage() {
         });
         localStorage.setItem('user', JSON.stringify(data));
 
+        // Si es nuevo usuario pendiente, verificar si necesita completar solicitud
+        if (data.estadoMiembro === 'pendiente_aprobacion') {
+          try {
+            const solicitudesRes = await axios.get(`${API}/solicitudes`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const tieneSolicitud = solicitudesRes.data.some((s: any) => 
+              s.usuarioId === data.id && !s.esVirtual
+            );
+            if (!tieneSolicitud) {
+              router.replace('/registro-solicitud');
+              return;
+            }
+          } catch {
+            // Si hay error, igual redirigir a completar solicitud
+            router.replace('/registro-solicitud');
+            return;
+          }
+        }
+
         // Redirigir al inicio
         router.replace('/');
       } catch (err: any) {

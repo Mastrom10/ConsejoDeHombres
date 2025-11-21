@@ -27,24 +27,35 @@ router.get('/', async (_req, res) => {
   });
 
   // Crear solicitudes "virtuales" para usuarios pendientes sin solicitud
-  const solicitudesVirtuales = usuariosPendientes.map(usuario => ({
-    id: `virtual-${usuario.id}`,
-    usuarioId: usuario.id,
-    textoSolicitud: `Solicitud de ingreso de ${usuario.displayName}. Usuario registrado el ${new Date(usuario.createdAt).toLocaleDateString()}.`,
-    fotoSolicitudUrl: usuario.avatarUrl || '/img/default-avatar.png',
-    estadoSolicitud: 'pendiente' as EstadoSolicitud,
-    fechaCreacion: usuario.createdAt,
-    fechaResolucion: null as Date | null,
-    totalAprobaciones: 0,
-    totalRechazos: 0,
-    usuario: {
-      id: usuario.id,
-      displayName: usuario.displayName,
-      avatarUrl: usuario.avatarUrl,
-      email: usuario.email
-    },
-    esVirtual: true // Flag para identificar solicitudes virtuales
-  }));
+  // Solo mostrar usuarios que realmente no tienen solicitud (no los que están esperando completarla)
+  const solicitudesVirtuales = usuariosPendientes
+    .filter(usuario => {
+      // No mostrar como virtual si el usuario acaba de registrarse y aún no completó la solicitud
+      // Solo mostrar si lleva más de 1 hora sin completar (para evitar mostrar usuarios que están en proceso)
+      const horasDesdeRegistro = (new Date().getTime() - usuario.createdAt.getTime()) / (1000 * 60 * 60);
+      return horasDesdeRegistro > 1;
+    })
+    .map(usuario => ({
+      id: `virtual-${usuario.id}`,
+      usuarioId: usuario.id,
+      textoSolicitud: `Solicitud de ingreso de ${usuario.displayName}. Usuario registrado el ${new Date(usuario.createdAt).toLocaleDateString()}.`,
+      fotoSolicitudUrl: usuario.avatarUrl || '/img/default-avatar.png',
+      cartaSolicitud: null,
+      redesSociales: null,
+      codigoAceptado: false,
+      estadoSolicitud: 'pendiente' as EstadoSolicitud,
+      fechaCreacion: usuario.createdAt,
+      fechaResolucion: null as Date | null,
+      totalAprobaciones: 0,
+      totalRechazos: 0,
+      usuario: {
+        id: usuario.id,
+        displayName: usuario.displayName,
+        avatarUrl: usuario.avatarUrl,
+        email: usuario.email
+      },
+      esVirtual: true // Flag para identificar solicitudes virtuales
+    }));
 
   // Combinar solicitudes reales y virtuales
   const todasLasSolicitudes = [
@@ -62,11 +73,24 @@ router.get('/', async (_req, res) => {
 router.post('/', authenticate, async (req, res, next) => {
   try {
     const parsed = solicitudSchema.parse(req.body);
+    
+    // Verificar si ya tiene una solicitud
+    const solicitudExistente = await prisma.solicitudMiembro.findFirst({
+      where: { usuarioId: req.user!.id }
+    });
+    
+    if (solicitudExistente) {
+      return res.status(400).json({ message: 'Ya tienes una solicitud en proceso' });
+    }
+
     const solicitud = await prisma.solicitudMiembro.create({
       data: {
         usuarioId: req.user!.id,
         textoSolicitud: parsed.textoSolicitud,
-        fotoSolicitudUrl: parsed.fotoSolicitudUrl
+        fotoSolicitudUrl: parsed.fotoSolicitudUrl,
+        cartaSolicitud: parsed.cartaSolicitud || null,
+        redesSociales: parsed.redesSociales || null,
+        codigoAceptado: parsed.codigoAceptado
       }
     });
     res.status(201).json(solicitud);
@@ -94,7 +118,10 @@ router.post('/:id/votar', authenticate, requireMember, async (req, res, next) =>
         data: {
           usuarioId: usuario.id,
           textoSolicitud: `Solicitud de ingreso de ${usuario.displayName}. Usuario registrado el ${new Date(usuario.createdAt).toLocaleDateString()}.`,
-          fotoSolicitudUrl: usuario.avatarUrl || '/img/default-avatar.png'
+          fotoSolicitudUrl: usuario.avatarUrl || '/img/default-avatar.png',
+          cartaSolicitud: null,
+          redesSociales: null,
+          codigoAceptado: false
         }
       });
       solicitudId = solicitud.id;
